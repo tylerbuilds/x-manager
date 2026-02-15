@@ -249,7 +249,172 @@ export function ensureSchema(sqlite: SqliteDb): void {
 
     CREATE INDEX IF NOT EXISTS idx_campaign_approvals_status
       ON campaign_approvals(campaign_id, status, requested_at);
+
+    -- P1.1: Idempotency
+    CREATE TABLE IF NOT EXISTS api_idempotency (
+      id INTEGER PRIMARY KEY,
+      scope TEXT NOT NULL,
+      idempotency_key TEXT NOT NULL,
+      status_code INTEGER NOT NULL,
+      response_json TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_api_idempotency_scope_key
+      ON api_idempotency(scope, idempotency_key);
+    CREATE INDEX IF NOT EXISTS idx_api_idempotency_expires
+      ON api_idempotency(expires_at);
+
+    -- P1.2: Durable Runs Model
+    CREATE TABLE IF NOT EXISTS agent_runs (
+      id INTEGER PRIMARY KEY,
+      campaign_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'running',
+      dry_run INTEGER NOT NULL DEFAULT 0,
+      requested_by TEXT,
+      input_json TEXT,
+      output_json TEXT,
+      error TEXT,
+      started_at INTEGER DEFAULT (unixepoch()),
+      finished_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_runs_campaign
+      ON agent_runs(campaign_id, status, started_at);
+
+    CREATE TABLE IF NOT EXISTS agent_run_steps (
+      id INTEGER PRIMARY KEY,
+      run_id INTEGER NOT NULL,
+      task_id INTEGER,
+      step_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      input_json TEXT,
+      output_json TEXT,
+      error TEXT,
+      started_at INTEGER DEFAULT (unixepoch()),
+      finished_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_run_steps_run
+      ON agent_run_steps(run_id, started_at);
+
+    -- P1.5: Scheduled Engagement Actions
+    CREATE TABLE IF NOT EXISTS scheduled_actions (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      action_type TEXT NOT NULL,
+      target_id TEXT,
+      payload_json TEXT NOT NULL,
+      scheduled_time INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'scheduled',
+      result_json TEXT,
+      error TEXT,
+      idempotency_key TEXT,
+      run_id INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_scheduled_actions_status_time
+      ON scheduled_actions(status, scheduled_time);
+    CREATE INDEX IF NOT EXISTS idx_scheduled_actions_account
+      ON scheduled_actions(account_slot, status, scheduled_time);
+
+    -- P2.3: API Call Log
+    CREATE TABLE IF NOT EXISTS x_api_calls (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL,
+      endpoint TEXT NOT NULL,
+      method TEXT NOT NULL,
+      status_code INTEGER,
+      duration_ms INTEGER,
+      error TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_x_api_calls_slot_created
+      ON x_api_calls(account_slot, created_at);
+
+    -- P3.1: Engagement Cursors
+    CREATE TABLE IF NOT EXISTS engagement_cursors (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL,
+      cursor_type TEXT NOT NULL,
+      cursor_value TEXT NOT NULL,
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_engagement_cursors_slot_type
+      ON engagement_cursors(account_slot, cursor_type);
+
+    -- P3.3: Inbox Tags and Notes
+    CREATE TABLE IF NOT EXISTS inbox_tags (
+      id INTEGER PRIMARY KEY,
+      inbox_id INTEGER NOT NULL,
+      tag TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_inbox_tags_inbox
+      ON inbox_tags(inbox_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_inbox_tags_unique
+      ON inbox_tags(inbox_id, tag);
+
+    CREATE TABLE IF NOT EXISTS inbox_notes (
+      id INTEGER PRIMARY KEY,
+      inbox_id INTEGER NOT NULL,
+      author TEXT NOT NULL DEFAULT 'operator',
+      note TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_inbox_notes_inbox
+      ON inbox_notes(inbox_id);
+
+    -- P4.2: Drafts and Templates
+    CREATE TABLE IF NOT EXISTS draft_posts (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      text TEXT NOT NULL,
+      media_urls TEXT,
+      community_id TEXT,
+      reply_to_tweet_id TEXT,
+      thread_id TEXT,
+      thread_index INTEGER,
+      source TEXT,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_draft_posts_account
+      ON draft_posts(account_slot, created_at);
+
+    CREATE TABLE IF NOT EXISTS post_templates (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT,
+      template TEXT NOT NULL,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
   `);
+
+  // P1.4: Approval gating columns on campaign_tasks
+  ensureColumn(
+    sqlite,
+    'campaign_tasks',
+    'requires_approval',
+    'ALTER TABLE campaign_tasks ADD COLUMN requires_approval INTEGER NOT NULL DEFAULT 0',
+  );
+  ensureColumn(
+    sqlite,
+    'campaign_tasks',
+    'approval_id',
+    'ALTER TABLE campaign_tasks ADD COLUMN approval_id INTEGER',
+  );
+
+  // P3.3: Inbox assignment
+  ensureColumn(
+    sqlite,
+    'engagement_inbox',
+    'assigned_to',
+    "ALTER TABLE engagement_inbox ADD COLUMN assigned_to TEXT DEFAULT 'unassigned'",
+  );
 
   ensureColumn(
     sqlite,

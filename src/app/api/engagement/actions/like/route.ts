@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { likeTweet } from '@/lib/twitter-api-client';
 import { parseAccountSlot, recordEngagementAction, requireConnectedAccount } from '@/lib/engagement-ops';
+import { withIdempotency } from '@/lib/idempotency';
 
 type LikeBody = {
   account_slot?: unknown;
@@ -25,12 +26,13 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  let accountSlot: 1 | 2 = 1;
-  let inboxId: number | null = null;
-  let tweetId: string | null = null;
+  return withIdempotency('engagement-like', req, async () => {
+    let accountSlot: 1 | 2 = 1;
+    let inboxId: number | null = null;
+    let tweetId: string | null = null;
 
-  try {
-    const body = (await req.json()) as LikeBody;
+    try {
+      const body = (await req.json()) as LikeBody;
     accountSlot = parseAccountSlot(body.account_slot ?? 1);
     inboxId = asInt(body.inbox_id);
     tweetId = asString(body.tweet_id);
@@ -61,21 +63,22 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to like tweet.';
-    await recordEngagementAction({
-      inboxId,
-      accountSlot,
-      actionType: 'like',
-      targetId: tweetId,
-      payload: {},
-      status: 'failed',
-      errorMessage: message,
-    }).catch(() => {
-      // Ignore follow-up logging failures.
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to like tweet.';
+      await recordEngagementAction({
+        inboxId,
+        accountSlot,
+        actionType: 'like',
+        targetId: tweetId,
+        payload: {},
+        status: 'failed',
+        errorMessage: message,
+      }).catch(() => {
+        // Ignore follow-up logging failures.
+      });
 
-    console.error('Failed to like tweet:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+      console.error('Failed to like tweet:', error);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  });
 }

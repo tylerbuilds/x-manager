@@ -7,6 +7,7 @@ import { scheduledPosts } from '@/lib/db/schema';
 import { parseAccountSlot, type AccountSlot } from '@/lib/account-slots';
 import { canonicalizeUrl, computeDedupeKey, extractFirstUrl, normalizeCopy } from '@/lib/scheduler-dedupe';
 import { ensureSafeUploadUrl } from '@/lib/uploads';
+import { withIdempotency } from '@/lib/idempotency';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -76,8 +77,9 @@ function normalizeMediaUrls(urls: string[]): string[] {
 }
 
 export async function POST(req: Request) {
-  try {
-    const body = (await req.json()) as ThreadScheduleRequest;
+  return withIdempotency('scheduler-thread', req, async () => {
+    try {
+      const body = (await req.json()) as ThreadScheduleRequest;
 
     const rawSlot = body.account_slot ?? body.accountSlot;
     let accountSlot: AccountSlot = 1;
@@ -222,8 +224,9 @@ export async function POST(req: Request) {
       }
       throw error;
     }
-  } catch (error) {
-    console.error('Error scheduling thread:', error);
-    return NextResponse.json({ error: 'Failed to schedule thread.' }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Error scheduling thread:', error);
+      return NextResponse.json({ error: 'Failed to schedule thread.' }, { status: 500 });
+    }
+  });
 }

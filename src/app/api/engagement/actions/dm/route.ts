@@ -4,6 +4,7 @@ import { sendDirectMessage } from '@/lib/twitter-api-client';
 import { db } from '@/lib/db';
 import { engagementInbox } from '@/lib/db/schema';
 import { parseAccountSlot, recordEngagementAction, requireConnectedAccount } from '@/lib/engagement-ops';
+import { withIdempotency } from '@/lib/idempotency';
 
 type DmBody = {
   account_slot?: unknown;
@@ -29,13 +30,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  let accountSlot: 1 | 2 = 1;
-  let inboxId: number | null = null;
-  let recipientUserId: string | null = null;
-  let text: string | null = null;
+  return withIdempotency('engagement-dm', req, async () => {
+    let accountSlot: 1 | 2 = 1;
+    let inboxId: number | null = null;
+    let recipientUserId: string | null = null;
+    let text: string | null = null;
 
-  try {
-    const body = (await req.json()) as DmBody;
+    try {
+      const body = (await req.json()) as DmBody;
     accountSlot = parseAccountSlot(body.account_slot ?? 1);
     inboxId = asInt(body.inbox_id);
     recipientUserId = asString(body.recipient_user_id);
@@ -75,21 +77,22 @@ export async function POST(req: Request) {
       ok: true,
       eventId: result.eventId,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send direct message.';
-    await recordEngagementAction({
-      inboxId,
-      accountSlot,
-      actionType: 'dm_send',
-      targetId: recipientUserId,
-      payload: { text },
-      status: 'failed',
-      errorMessage: message,
-    }).catch(() => {
-      // Ignore follow-up logging failures.
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send direct message.';
+      await recordEngagementAction({
+        inboxId,
+        accountSlot,
+        actionType: 'dm_send',
+        targetId: recipientUserId,
+        payload: { text },
+        status: 'failed',
+        errorMessage: message,
+      }).catch(() => {
+        // Ignore follow-up logging failures.
+      });
 
-    console.error('Failed to send direct message:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+      console.error('Failed to send direct message:', error);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  });
 }

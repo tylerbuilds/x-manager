@@ -98,6 +98,7 @@ export const engagementInbox = sqliteTable('engagement_inbox', {
   rawPayload: text('raw_payload').notNull(),
   receivedAt: integer('received_at', { mode: 'timestamp' }).notNull(),
   status: text('status', { enum: ['new', 'reviewed', 'replied', 'dismissed'] }).notNull().default('new'),
+  assignedTo: text('assigned_to').default('unassigned'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
@@ -142,6 +143,8 @@ export const campaignTasks = sqliteTable('campaign_tasks', {
     .notNull()
     .default('pending'),
   output: text('output'),
+  requiresApproval: integer('requires_approval', { mode: 'boolean' }).notNull().default(false),
+  approvalId: integer('approval_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
@@ -155,6 +158,125 @@ export const campaignApprovals = sqliteTable('campaign_approvals', {
   decisionNote: text('decision_note'),
   requestedAt: integer('requested_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   decidedAt: integer('decided_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P1.1: Idempotency ---
+export const apiIdempotency = sqliteTable('api_idempotency', {
+  id: integer('id').primaryKey(),
+  scope: text('scope').notNull(),
+  idempotencyKey: text('idempotency_key').notNull(),
+  statusCode: integer('status_code').notNull(),
+  responseJson: text('response_json').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P1.2: Durable Runs Model ---
+export const agentRuns = sqliteTable('agent_runs', {
+  id: integer('id').primaryKey(),
+  campaignId: integer('campaign_id'),
+  status: text('status', { enum: ['running', 'completed', 'failed', 'cancelled'] }).notNull().default('running'),
+  dryRun: integer('dry_run', { mode: 'boolean' }).notNull().default(false),
+  requestedBy: text('requested_by'),
+  inputJson: text('input_json'),
+  outputJson: text('output_json'),
+  error: text('error'),
+  startedAt: integer('started_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const agentRunSteps = sqliteTable('agent_run_steps', {
+  id: integer('id').primaryKey(),
+  runId: integer('run_id').notNull(),
+  taskId: integer('task_id'),
+  stepType: text('step_type').notNull(),
+  status: text('status', { enum: ['running', 'completed', 'failed', 'skipped'] }).notNull().default('running'),
+  inputJson: text('input_json'),
+  outputJson: text('output_json'),
+  error: text('error'),
+  startedAt: integer('started_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  finishedAt: integer('finished_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P1.5: Scheduled Engagement Actions ---
+export const scheduledActions = sqliteTable('scheduled_actions', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull().default(1),
+  actionType: text('action_type', { enum: ['reply', 'dm', 'like', 'repost'] }).notNull(),
+  targetId: text('target_id'),
+  payloadJson: text('payload_json').notNull(),
+  scheduledTime: integer('scheduled_time', { mode: 'timestamp' }).notNull(),
+  status: text('status', { enum: ['scheduled', 'completed', 'failed', 'cancelled'] }).notNull().default('scheduled'),
+  resultJson: text('result_json'),
+  error: text('error'),
+  idempotencyKey: text('idempotency_key'),
+  runId: integer('run_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P2.3: API Call Log ---
+export const xApiCalls = sqliteTable('x_api_calls', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull(),
+  endpoint: text('endpoint').notNull(),
+  method: text('method').notNull(),
+  statusCode: integer('status_code'),
+  durationMs: integer('duration_ms'),
+  error: text('error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P3.1: Engagement Cursors ---
+export const engagementCursors = sqliteTable('engagement_cursors', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull(),
+  cursorType: text('cursor_type', { enum: ['mention', 'dm'] }).notNull(),
+  cursorValue: text('cursor_value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P3.3: Inbox Assignments, Tags, Notes ---
+export const inboxTags = sqliteTable('inbox_tags', {
+  id: integer('id').primaryKey(),
+  inboxId: integer('inbox_id').notNull(),
+  tag: text('tag').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const inboxNotes = sqliteTable('inbox_notes', {
+  id: integer('id').primaryKey(),
+  inboxId: integer('inbox_id').notNull(),
+  author: text('author').notNull().default('operator'),
+  note: text('note').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- P4.2: Drafts and Templates ---
+export const draftPosts = sqliteTable('draft_posts', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull().default(1),
+  text: text('text').notNull(),
+  mediaUrls: text('media_urls'),
+  communityId: text('community_id'),
+  replyToTweetId: text('reply_to_tweet_id'),
+  threadId: text('thread_id'),
+  threadIndex: integer('thread_index'),
+  source: text('source'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const postTemplates = sqliteTable('post_templates', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  category: text('category'),
+  template: text('template').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });

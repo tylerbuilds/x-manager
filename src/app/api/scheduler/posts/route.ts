@@ -15,6 +15,7 @@ import {
   MAX_UPLOAD_FILES,
   toPublicPathFromMediaUrl,
 } from '@/lib/uploads';
+import { withIdempotency } from '@/lib/idempotency';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -62,8 +63,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  try {
-    const formData = await req.formData();
+  return withIdempotency('scheduler-posts', req, async () => {
+    try {
+      const formData = await req.formData();
 
     const text = String(formData.get('text') || '');
     const scheduledTime = formData.get('scheduled_time') as string | null;
@@ -204,10 +206,11 @@ export async function POST(req: Request) {
       }
       throw error;
     }
-  } catch (error) {
-    console.error('Error creating scheduled post:', error);
-    return NextResponse.json({ error: 'Failed to create post' }, { status: 500 });
-  }
+    } catch (error) {
+      console.error('Error creating scheduled post:', error);
+      return NextResponse.json({ error: 'Failed to create post' }, { status: 500 });
+    }
+  });
 }
 
 export async function DELETE() {

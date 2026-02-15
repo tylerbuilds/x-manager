@@ -13,4 +13,14 @@ export function registerNodeInstrumentation(): void {
       console.error('[instrumentation] Scheduler startup failed:', error);
     }
   })();
+
+  void (async () => {
+    try {
+      const { startActionSchedulerLoop } = await import('./lib/action-scheduler');
+      startActionSchedulerLoop({ intervalSeconds: 30 });
+      console.log('[instrumentation] Action scheduler started (30s interval).');
+    } catch (error) {
+      console.error('[instrumentation] Action scheduler startup failed:', error);
+    }
+  })();
 }

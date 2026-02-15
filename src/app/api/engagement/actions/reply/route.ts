@@ -4,6 +4,7 @@ import { postTweet } from '@/lib/twitter-api-client';
 import { db } from '@/lib/db';
 import { engagementInbox } from '@/lib/db/schema';
 import { parseAccountSlot, recordEngagementAction, requireConnectedAccount } from '@/lib/engagement-ops';
+import { withIdempotency } from '@/lib/idempotency';
 
 type ReplyBody = {
   account_slot?: unknown;
@@ -29,13 +30,14 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  let accountSlot: 1 | 2 = 1;
-  let inboxId: number | null = null;
-  let replyToTweetId: string | null = null;
-  let text: string | null = null;
+  return withIdempotency('engagement-reply', req, async () => {
+    let accountSlot: 1 | 2 = 1;
+    let inboxId: number | null = null;
+    let replyToTweetId: string | null = null;
+    let text: string | null = null;
 
-  try {
-    const body = (await req.json()) as ReplyBody;
+    try {
+      const body = (await req.json()) as ReplyBody;
     accountSlot = parseAccountSlot(body.account_slot ?? 1);
     inboxId = asInt(body.inbox_id);
     replyToTweetId = asString(body.reply_to_tweet_id);
@@ -93,21 +95,22 @@ export async function POST(req: Request) {
       tweetId: result.data?.id || null,
       text: result.data?.text || text,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to send reply.';
-    await recordEngagementAction({
-      inboxId,
-      accountSlot,
-      actionType: 'reply',
-      targetId: replyToTweetId,
-      payload: { text },
-      status: 'failed',
-      errorMessage: message,
-    }).catch(() => {
-      // Ignore follow-up logging failures.
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to send reply.';
+      await recordEngagementAction({
+        inboxId,
+        accountSlot,
+        actionType: 'reply',
+        targetId: replyToTweetId,
+        payload: { text },
+        status: 'failed',
+        errorMessage: message,
+      }).catch(() => {
+        // Ignore follow-up logging failures.
+      });
 
-    console.error('Failed to send reply:', error);
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+      console.error('Failed to send reply:', error);
+      return NextResponse.json({ error: message }, { status: 500 });
+    }
+  });
 }

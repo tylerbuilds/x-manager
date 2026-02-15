@@ -321,6 +321,28 @@ function parseJsonSafe(raw: string): unknown {
   }
 }
 
+function extractEndpoint(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname;
+  } catch {
+    return url;
+  }
+}
+
+function logApiCall(endpoint: string, method: string, statusCode: number, durationMs: number, error: string | null): void {
+  try {
+    // Lazy import to avoid DB init issues during build
+    const { sqlite } = require('@/lib/db');
+    sqlite.prepare(`
+      INSERT INTO x_api_calls (account_slot, endpoint, method, status_code, duration_ms, error, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, strftime('%s', 'now'))
+    `).run(1, endpoint, method, statusCode, durationMs, error);
+  } catch {
+    // Don't let logging failures break API calls
+  }
+}
+
 async function signedJsonRequest<T>(params: {
   method: 'GET' | 'POST';
   url: string;
@@ -328,7 +350,12 @@ async function signedJsonRequest<T>(params: {
   accessTokenSecret: string;
   config: ResolvedXConfig;
   body?: unknown;
+  retries?: number;
 }): Promise<{ ok: boolean; status: number; data?: T; error?: TwitterApiResponse }> {
+  const retries = params.retries ?? 1;
+  const startTime = Date.now();
+  const endpoint = extractEndpoint(params.url);
+
   const oauth = createOAuthClient(params.config.xApiKey, params.config.xApiSecret);
   const headers = generateOAuthHeaders(
     oauth,
@@ -337,20 +364,57 @@ async function signedJsonRequest<T>(params: {
     params.accessToken,
     params.accessTokenSecret,
   );
+
   const response = await fetch(params.url, {
     method: params.method,
     headers,
     body: params.body === undefined ? undefined : JSON.stringify(params.body),
   });
 
+  const durationMs = Date.now() - startTime;
   const parsedBody = parseJsonSafe(await response.text());
+
   if (!response.ok) {
+    const errorResponse = normalizeErrorResponse(response, parsedBody);
+    const errorMessage = errorResponse.errors?.[0]?.message || null;
+
+    // Log failed API call
+    logApiCall(endpoint, params.method, response.status, durationMs, errorMessage);
+
+    // Handle 429 rate limit
+    if (response.status === 429 && retries > 0) {
+      const resetEpoch = response.headers.get('x-rate-limit-reset');
+      const retryAfter = response.headers.get('retry-after');
+      let waitMs = 5000; // default 5s
+
+      if (resetEpoch) {
+        waitMs = Math.max(1000, (Number(resetEpoch) * 1000) - Date.now());
+      } else if (retryAfter) {
+        waitMs = Number(retryAfter) * 1000;
+      }
+
+      waitMs = Math.min(waitMs, 60000); // cap at 60s
+      console.warn(`[twitter-api] Rate limited. Waiting ${Math.round(waitMs / 1000)}s before retry.`);
+      await new Promise(r => setTimeout(r, waitMs));
+      return signedJsonRequest({ ...params, retries: retries - 1 });
+    }
+
+    // Handle 5xx server errors
+    if (response.status >= 500 && retries > 0) {
+      console.warn(`[twitter-api] Server error ${response.status}. Retrying in 2s.`);
+      await new Promise(r => setTimeout(r, 2000));
+      return signedJsonRequest({ ...params, retries: retries - 1 });
+    }
+
     return {
       ok: false,
       status: response.status,
-      error: normalizeErrorResponse(response, parsedBody),
+      error: errorResponse,
     };
   }
+
+  // Log successful API call
+  logApiCall(endpoint, params.method, response.status, durationMs, null);
 
   return {
     ok: true,
