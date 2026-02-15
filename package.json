@@ -1,0 +1,61 @@
+{
+  "name": "x-manager",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=20 <26"
+  },
+  "scripts": {
+    "dev": "node ./node_modules/next/dist/bin/next dev -p 3999",
+    "dev:daemon": "bash scripts/dev-3999.sh start",
+    "dev:stop": "bash scripts/dev-3999.sh stop",
+    "dev:status": "bash scripts/dev-3999.sh status",
+    "dev:logs": "bash scripts/dev-3999.sh logs",
+    "dev:ensure": "bash scripts/dev-3999.sh ensure",
+    "install:autostart": "bash scripts/install-autostart.sh",
+    "install:systemd-user": "bash scripts/install-systemd-user.sh",
+    "build": "node ./node_modules/next/dist/bin/next build",
+    "start": "node ./node_modules/next/dist/bin/next start",
+    "lint": "node ./node_modules/next/dist/bin/next lint",
+    "db:generate": "drizzle-kit generate:sqlite",
+    "db:push": "drizzle-kit push:sqlite",
+    "db:migrate": "drizzle-kit migrate:sqlite",
+    "cron:run": "ts-node --project tsconfig.cron.json scripts/scheduler.ts",
+    "import:csv": "ts-node --project tsconfig.cron.json scripts/import-csv.ts"
+  },
+  "dependencies": {
+    "@giphy/js-fetch-api": "^5.0.0",
+    "@giphy/react-components": "^9.1.0",
+    "better-sqlite3": "^12.6.2",
+    "clsx": "^2.1.1",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.3.1",
+    "drizzle-orm": "^0.30.10",
+    "emoji-picker-react": "^4.9.4",
+    "lucide-react": "^0.381.0",
+    "next": "^14.2.35",
+    "node-cron": "^3.0.3",
+    "oauth-1.0a": "^2.2.6",
+    "openai": "^4.47.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-icons": "^5.2.1",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.10",
+    "@types/crypto-js": "^4.2.2",
+    "@types/node": "^20",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.19",
+    "drizzle-kit": "^0.20.17",
+    "eslint": "^8",
+    "eslint-config-next": "^14.2.35",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

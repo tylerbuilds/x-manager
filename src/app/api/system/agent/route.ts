@@ -1,0 +1,205 @@
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const baseUrl = `${url.protocol}//${url.host}`;
+
+  return NextResponse.json({
+    name: 'x-manager',
+    description: 'Local X (Twitter) account connector + tweet scheduler (supports threads, replies, media, dedupe).',
+    baseUrl,
+    ui: `${baseUrl}/`,
+    quickstart: {
+      start: 'npm run dev:ensure',
+      status: 'npm run dev:status',
+      logs: 'npm run dev:logs',
+      stop: 'npm run dev:stop',
+      systemd: {
+        install: 'npm run install:systemd-user',
+        start: 'systemctl --user start x-manager.service',
+        stop: 'systemctl --user stop x-manager.service',
+        status: 'systemctl --user status x-manager.service --no-pager',
+        logs: 'journalctl --user -u x-manager.service -n 200 --no-pager',
+        cli: 'x-manager start',
+      },
+      url: 'http://127.0.0.1:3999',
+      note: 'By default the server binds to 127.0.0.1 for safety. Use SSH port-forwarding if you need to access it remotely.',
+    },
+    coreEndpoints: [
+      {
+        id: 'readiness',
+        method: 'GET',
+        path: '/api/system/readiness',
+        description: 'Health/readiness check including connected X slots and scheduler state.',
+      },
+      {
+        id: 'auth_login',
+        method: 'POST',
+        path: '/api/system/auth/login',
+        contentType: 'application/json',
+        description: 'Create an authenticated admin session cookie using X_MANAGER_ADMIN_TOKEN.',
+      },
+      {
+        id: 'auth_session',
+        method: 'GET',
+        path: '/api/system/auth/session',
+        description: 'Return current API/UI auth session state.',
+      },
+      {
+        id: 'list_posts',
+        method: 'GET',
+        path: '/api/scheduler/posts',
+        description: 'List scheduled posts (optionally filter by ?account_slot=1|2).',
+      },
+      {
+        id: 'schedule_post',
+        method: 'POST',
+        path: '/api/scheduler/posts',
+        contentType: 'multipart/form-data',
+        description:
+          'Schedule a single post (supports replies + media). Dedupe: if same canonical URL + same copy is already scheduled for that slot, returns the existing post.',
+        fields: [
+          { name: 'text', required: true },
+          { name: 'scheduled_time', required: true, format: 'ISO string' },
+          { name: 'account_slot', required: false, default: 1, allowed: [1, 2] },
+          { name: 'community_id', required: false },
+          { name: 'reply_to_tweet_id', required: false },
+          { name: 'files', required: false, repeatable: true, note: 'Up to 4 images/GIFs.' },
+          { name: 'thread_id', required: false, note: 'If set, groups this post into a thread.' },
+          { name: 'thread_index', required: false, note: '0-based position in thread. Requires thread_id.' },
+          { name: 'source_url', required: false, note: 'Optional URL override for dedupe/canonicalization.' },
+        ],
+      },
+      {
+        id: 'upload_media',
+        method: 'POST',
+        path: '/api/scheduler/media',
+        contentType: 'multipart/form-data',
+        description: 'Upload media to /public/uploads and return mediaUrls you can reference in thread scheduling.',
+        fields: [{ name: 'files', required: true, repeatable: true, note: 'Up to 4 files.' }],
+      },
+      {
+        id: 'schedule_thread',
+        method: 'POST',
+        path: '/api/scheduler/thread',
+        contentType: 'application/json',
+        description:
+          'Schedule a thread as a group (stored as multiple scheduled_posts rows with thread_id/thread_index). If dedupe finds any tweet in the thread already scheduled (same URL+copy), the whole thread is skipped.',
+      },
+      {
+        id: 'create_thread',
+        method: 'POST',
+        path: '/api/agent/create-thread',
+        contentType: 'application/json',
+        description:
+          'Create a media-aware thread draft from an article URL (extracts quote candidates + article images, downloads images into /uploads). Optional one-shot scheduling when schedule=true.',
+        fields: [
+          { name: 'article_url', required: true, note: 'Public article URL (e.g. swarmsignal.net post).' },
+          { name: 'account_slot', required: false, default: 1, allowed: [1, 2] },
+          { name: 'max_tweets', required: false, default: 6, note: 'Range 2..12' },
+          { name: 'include_images', required: false, default: true },
+          { name: 'schedule', required: false, default: false },
+          { name: 'scheduled_time', required: false, format: 'ISO string', note: 'Required only when schedule=true.' },
+          { name: 'dedupe', required: false, default: true },
+          { name: 'community_id', required: false },
+          { name: 'reply_to_tweet_id', required: false },
+        ],
+      },
+      {
+        id: 'openclaw_bridge_post',
+        method: 'POST',
+        path: '/api/bridge/openclaw/post',
+        contentType: 'application/json',
+        description:
+          'Bridge endpoint for external bots (e.g. OpenClaw) to publish immediately via a connected X slot. Requires Authorization: Bearer <OPENCLAW_BRIDGE_TOKEN>; supports optional signed requests via x-openclaw-timestamp + x-openclaw-signature.',
+        fields: [
+          { name: 'text|content|message|tweet_text', required: true, note: 'Any one can supply tweet text.' },
+          { name: 'account_slot|slot', required: false, default: 1, allowed: [1, 2] },
+          { name: 'account|handle|username', required: false, note: 'Alternative to slot (e.g. "swarm_signal").' },
+          { name: 'media_urls|mediaUrls|images', required: false, note: 'Up to 4 image URLs or /uploads paths.' },
+          { name: 'community_id|communityId', required: false },
+          { name: 'reply_to_tweet_id|replyToTweetId|reply_to', required: false },
+          { name: 'dry_run|dryRun|simulate', required: false, default: false },
+        ],
+      },
+      {
+        id: 'engagement_sync',
+        method: 'POST',
+        path: '/api/engagement/inbox/sync',
+        contentType: 'application/json',
+        description: 'Pull mentions and/or DMs for a slot and upsert them into the local engagement inbox.',
+      },
+      {
+        id: 'engagement_inbox',
+        method: 'GET',
+        path: '/api/engagement/inbox',
+        description: 'List local engagement inbox items with optional filters (slot/type/status).',
+      },
+      {
+        id: 'engagement_reply',
+        method: 'POST',
+        path: '/api/engagement/actions/reply',
+        contentType: 'application/json',
+        description: 'Send an immediate reply to a tweet and optionally mark an inbox item as replied.',
+      },
+      {
+        id: 'engagement_dm',
+        method: 'POST',
+        path: '/api/engagement/actions/dm',
+        contentType: 'application/json',
+        description: 'Send an immediate direct message via a connected slot.',
+      },
+      {
+        id: 'agent_campaigns',
+        method: 'GET/POST',
+        path: '/api/agent/campaigns',
+        description: 'Create and list campaign orchestration containers (goal, date window, slot, status).',
+      },
+      {
+        id: 'agent_campaign_plan',
+        method: 'POST',
+        path: '/api/agent/campaigns/:id/plan',
+        description: 'Generate a default agent execution plan for a campaign and optionally persist tasks.',
+      },
+      {
+        id: 'agent_campaign_tasks',
+        method: 'GET/POST',
+        path: '/api/agent/campaigns/:id/tasks',
+        description: 'List or create campaign tasks.',
+      },
+      {
+        id: 'agent_approvals',
+        method: 'GET/POST/PATCH',
+        path: '/api/agent/approvals',
+        description: 'Create/list/decide approval checkpoints for campaign tasks.',
+      },
+    ],
+    curlExamples: {
+      readiness: `curl -sS ${baseUrl}/api/system/readiness`,
+      authLogin: `curl -sS -X POST ${baseUrl}/api/system/auth/login \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"token\":\"'$X_MANAGER_ADMIN_TOKEN'\"}'`,
+      scheduleSingle: `curl -sS -X POST ${baseUrl}/api/scheduler/posts \\\n  -F account_slot=1 \\\n  -F scheduled_time=\"2026-02-10T09:00:00Z\" \\\n  -F text=\"Hello world https://example.com\"`,
+      scheduleReply: `curl -sS -X POST ${baseUrl}/api/scheduler/posts \\\n  -F account_slot=1 \\\n  -F scheduled_time=\"2026-02-10T09:00:00Z\" \\\n  -F reply_to_tweet_id=\"1234567890\" \\\n  -F text=\"Replying with a link https://example.com\"`,
+      scheduleWithImage: `curl -sS -X POST ${baseUrl}/api/scheduler/posts \\\n  -F account_slot=1 \\\n  -F scheduled_time=\"2026-02-10T09:00:00Z\" \\\n  -F text=\"With image https://example.com\" \\\n  -F files=@/absolute/path/to/image.jpg`,
+      uploadMedia: `curl -sS -X POST ${baseUrl}/api/scheduler/media \\\n  -F files=@/absolute/path/to/image1.jpg \\\n  -F files=@/absolute/path/to/image2.png`,
+      scheduleThreadJson: `curl -sS -X POST ${baseUrl}/api/scheduler/thread \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"account_slot\": 1,\n    \"scheduled_time\": \"2026-02-10T09:00:00Z\",\n    \"dedupe\": true,\n    \"tweets\": [\n      {\"text\": \"Thread part 1 https://example.com\", \"media_urls\": [\"/uploads/your-file.jpg\"]},\n      {\"text\": \"Thread part 2\"}\n    ]\n  }'`,
+      createThreadDraft: `curl -sS -X POST ${baseUrl}/api/agent/create-thread \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"article_url\": \"https://swarmsignal.net/example-post/\",\n    \"account_slot\": 1,\n    \"max_tweets\": 6,\n    \"include_images\": true,\n    \"schedule\": false\n  }'`,
+      createAndScheduleThread: `curl -sS -X POST ${baseUrl}/api/agent/create-thread \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"article_url\": \"https://swarmsignal.net/example-post/\",\n    \"account_slot\": 1,\n    \"scheduled_time\": \"2026-02-12T09:00:00Z\",\n    \"schedule\": true,\n    \"dedupe\": true\n  }'`,
+      openclawBridgePost: `curl -sS -X POST ${baseUrl}/api/bridge/openclaw/post \\\n  -H \"Authorization: Bearer $OPENCLAW_BRIDGE_TOKEN\" \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"content\": \"Bridge post from OpenClaw\",\n    \"account\": \"swarm_signal\",\n    \"images\": [\"/uploads/example.jpg\"],\n    \"dryRun\": false\n  }'`,
+      openclawBridgeSignedPost: `BODY='{\"content\":\"Bridge post from OpenClaw\",\"account\":\"swarm_signal\",\"images\":[],\"dryRun\":true}'\nTS=\"$(date +%s)\"\nSIG=\"$(printf '%s' \"$TS.$BODY\" | openssl dgst -sha256 -hmac \"$OPENCLAW_BRIDGE_SIGNING_SECRET\" -hex | awk '{print $2}')\"\ncurl -sS -X POST ${baseUrl}/api/bridge/openclaw/post \\\n  -H \"Authorization: Bearer $OPENCLAW_BRIDGE_TOKEN\" \\\n  -H \"x-openclaw-timestamp: $TS\" \\\n  -H \"x-openclaw-signature: $SIG\" \\\n  -H 'Content-Type: application/json' \\\n  -d \"$BODY\"`,
+      syncInbox: `curl -sS -X POST ${baseUrl}/api/engagement/inbox/sync \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"account_slot\":1,\"include_mentions\":true,\"include_dms\":true,\"count\":25}'`,
+      listInbox: `curl -sS '${baseUrl}/api/engagement/inbox?account_slot=1&type=mention&status=new'`,
+      sendReply: `curl -sS -X POST ${baseUrl}/api/engagement/actions/reply \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"account_slot\":1,\"reply_to_tweet_id\":\"1234567890\",\"text\":\"Thanks for sharing this.\"}'`,
+      sendDm: `curl -sS -X POST ${baseUrl}/api/engagement/actions/dm \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"account_slot\":1,\"recipient_user_id\":\"12345\",\"text\":\"Thanks for reaching out.\"}'`,
+      createCampaign: `curl -sS -X POST ${baseUrl}/api/agent/campaigns \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"name\":\"Q2 Launch\",\"objective\":\"Drive qualified demo requests\",\"account_slot\":1,\"status\":\"active\"}'`,
+      buildCampaignPlan: `curl -sS -X POST ${baseUrl}/api/agent/campaigns/1/plan \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"save\":true}'`,
+      createApproval: `curl -sS -X POST ${baseUrl}/api/agent/approvals \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"campaign_id\":1,\"task_id\":2,\"requested_by\":\"agent\"}'`,
+    },
+    notes: [
+      'When X_MANAGER_REQUIRE_AUTH=true, authenticate via /api/system/auth/login or send Authorization: Bearer <X_MANAGER_ADMIN_TOKEN> on API calls.',
+      'Link previews are controlled by X: include a URL in the text to get a card/preview.',
+      'Attaching your own images usually shows the image instead of the link card. X does not provide an API to replace a link-card preview image while keeping the card.',
+    ],
+  });
+}

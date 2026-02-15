@@ -1,0 +1,90 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Next.js
+/.next/
+/.next-local/
+/out/
+
+# Drizzle
+/drizzle/meta/
+/drizzle/sessions/
+
+# SQLite
+/sqlite.db
+/sqlite.db-journal
+/sqlite.db-shm
+/sqlite.db-wal
+*.sqlite
+*.sqlite3
+*.db
+
+# Local Environment
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build artifacts
+/build
+/build-output
+/build-next
+/build-next-*
+/dist
+/.vercel
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# OS-specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Runtime data
+/var/
+/tmp/
+
+# Backup/broken builds
+/.next.old.*
+/.next.broken.*
+/.next-local.bak.*
+
+# Test scripts (local only)
+test-*.sh
+test-*.js
+
+# Planning files (session-specific)
+/task_plan.md
+/findings.md
+/progress.md
+
+# Misc
+*.pem

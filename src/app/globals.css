@@ -1,0 +1,127 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f4f7fb;
+  --foreground: #111827; /* gray-900 */
+  
+  --card: #ffffff;
+  --card-foreground: #111827;
+  
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  
+  --primary: #0f766e; /* teal-700 */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #f1f5f9; /* slate-100 */
+  --secondary-foreground: #0f172a; /* slate-900 */
+  
+  --muted: #f1f5f9; /* slate-100 */
+  --muted-foreground: #64748b; /* slate-500 */
+  
+  --accent: #f1f5f9; /* slate-100 */
+  --accent-foreground: #0f172a; /* slate-900 */
+  
+  --destructive: #ef4444; /* red-500 */
+  --destructive-foreground: #ffffff;
+
+  --border: #e2e8f0; /* slate-200 */
+  --input: #e2e8f0; /* slate-200 */
+  --ring: #0f766e; /* teal-700 */
+  
+  --radius: 0.5rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -20%, #c7f3ea 0%, transparent 60%),
+    radial-gradient(900px 500px at 90% -10%, #dbeafe 0%, transparent 55%),
+    var(--background);
+  color: var(--foreground);
+  font-family: "Avenir Next", "Manrope", "Segoe UI", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Sora", "Avenir Next Demi Bold", "Manrope", "Segoe UI", sans-serif;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-card {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px -24px rgb(15 23 42 / 0.28), 0 1px 2px -1px rgb(15 23 42 / 0.12);
+  backdrop-filter: blur(6px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0f766e, #0f766e 45%, #0ea5a3);
+  color: var(--primary-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: 0 6px 18px -10px rgba(15, 118, 110, 0.85);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.03);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background-color: #e2e8f0; /* slate-200 */
+}
+
+/* Custom Scrollbar for columns */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.fade-up {
+  animation: fade-up 380ms ease-out both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up {
+    animation: none;
+  }
+}
