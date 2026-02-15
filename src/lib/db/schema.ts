@@ -280,3 +280,44 @@ export const postTemplates = sqliteTable('post_templates', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
+
+// --- Phase 1: Post Metrics ---
+export const postMetrics = sqliteTable('post_metrics', {
+  id: integer('id').primaryKey(),
+  scheduledPostId: integer('scheduled_post_id').notNull(),
+  twitterPostId: text('twitter_post_id').notNull(),
+  accountSlot: integer('account_slot').notNull(),
+  impressions: integer('impressions').notNull().default(0),
+  likes: integer('likes').notNull().default(0),
+  retweets: integer('retweets').notNull().default(0),
+  replies: integer('replies').notNull().default(0),
+  quotes: integer('quotes').notNull().default(0),
+  bookmarks: integer('bookmarks').notNull().default(0),
+  fetchedAt: integer('fetched_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Phase 4: Saved Replies ---
+export const savedReplies = sqliteTable('saved_replies', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  category: text('category'),
+  text: text('text').notNull(),
+  shortcut: text('shortcut'),
+  useCount: integer('use_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Phase 5: Content Queue ---
+export const contentQueue = sqliteTable('content_queue', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull().default(1),
+  text: text('text').notNull(),
+  mediaUrls: text('media_urls'),
+  communityId: text('community_id'),
+  position: integer('position').notNull().default(0),
+  status: text('status', { enum: ['queued', 'scheduled', 'cancelled'] }).notNull().default('queued'),
+  scheduledPostId: integer('scheduled_post_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});

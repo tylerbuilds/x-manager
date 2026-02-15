@@ -12,6 +12,7 @@ const VIEW_TITLES: Record<string, string> = {
   dashboard: 'Dashboard',
   calendar: 'Content Planner',
   discovery: 'Topic Discovery',
+  analytics: 'Analytics',
   ops: 'Ops Center',
   accounts: 'Accounts',
   settings: 'Settings',

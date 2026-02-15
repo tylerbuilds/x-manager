@@ -1,6 +1,6 @@
 'use client';
 
-import { Home, Calendar, Compass, Settings, Users, LogOut, Workflow } from 'lucide-react';
+import { Home, Calendar, Compass, Settings, Users, LogOut, Workflow, BarChart3 } from 'lucide-react';
 
 interface SidebarProps {
   activeView: string;
@@ -35,6 +35,12 @@ export default function Sidebar({ activeView, onViewChange, onLogout }: SidebarP
           label="Discovery" 
           active={activeView === 'discovery'} 
           onClick={() => onViewChange('discovery')} 
+        />
+        <NavItem
+          icon={<BarChart3 size={22} />}
+          label="Analytics"
+          active={activeView === 'analytics'}
+          onClick={() => onViewChange('analytics')}
         />
         <NavItem
           icon={<Workflow size={22} />}

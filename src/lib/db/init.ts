@@ -392,6 +392,55 @@ export function ensureSchema(sqlite: SqliteDb): void {
       created_at INTEGER DEFAULT (unixepoch()),
       updated_at INTEGER DEFAULT (unixepoch())
     );
+
+    -- Phase 1: Post Metrics
+    CREATE TABLE IF NOT EXISTS post_metrics (
+      id INTEGER PRIMARY KEY,
+      scheduled_post_id INTEGER NOT NULL,
+      twitter_post_id TEXT NOT NULL,
+      account_slot INTEGER NOT NULL,
+      impressions INTEGER NOT NULL DEFAULT 0,
+      likes INTEGER NOT NULL DEFAULT 0,
+      retweets INTEGER NOT NULL DEFAULT 0,
+      replies INTEGER NOT NULL DEFAULT 0,
+      quotes INTEGER NOT NULL DEFAULT 0,
+      bookmarks INTEGER NOT NULL DEFAULT 0,
+      fetched_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_post_metrics_twitter_id
+      ON post_metrics(twitter_post_id);
+    CREATE INDEX IF NOT EXISTS idx_post_metrics_scheduled_post
+      ON post_metrics(scheduled_post_id, fetched_at);
+    CREATE INDEX IF NOT EXISTS idx_post_metrics_slot_fetched
+      ON post_metrics(account_slot, fetched_at);
+
+    -- Phase 4: Saved Replies
+    CREATE TABLE IF NOT EXISTS saved_replies (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      category TEXT,
+      text TEXT NOT NULL,
+      shortcut TEXT,
+      use_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+
+    -- Phase 5: Content Queue
+    CREATE TABLE IF NOT EXISTS content_queue (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      text TEXT NOT NULL,
+      media_urls TEXT,
+      community_id TEXT,
+      position INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'queued',
+      scheduled_post_id INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_content_queue_slot_status
+      ON content_queue(account_slot, status, position);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks
@@ -414,6 +463,14 @@ export function ensureSchema(sqlite: SqliteDb): void {
     'engagement_inbox',
     'assigned_to',
     "ALTER TABLE engagement_inbox ADD COLUMN assigned_to TEXT DEFAULT 'unassigned'",
+  );
+
+  // Phase 3: Conversation threading
+  ensureColumn(
+    sqlite,
+    'engagement_inbox',
+    'in_reply_to_tweet_id',
+    'ALTER TABLE engagement_inbox ADD COLUMN in_reply_to_tweet_id TEXT',
   );
 
   ensureColumn(

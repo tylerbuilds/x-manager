@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, type SQL } from 'drizzle-orm';
+import { and, desc, eq, inArray, like, type SQL } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { engagementInbox } from '@/lib/db/schema';
@@ -45,6 +45,8 @@ export async function GET(req: Request) {
     const slotParam = url.searchParams.get('account_slot');
     const typeParam = url.searchParams.get('type');
     const statusParam = url.searchParams.get('status');
+    const search = url.searchParams.get('search')?.trim() || null;
+    const authorUsername = url.searchParams.get('authorUsername')?.trim() || null;
 
     const limit = parseLimit(url.searchParams.get('limit'));
 
@@ -70,6 +72,14 @@ export async function GET(req: Request) {
       if (statuses.length > 0) {
         conditions.push(inArray(engagementInbox.status, statuses));
       }
+    }
+
+    if (search) {
+      conditions.push(like(engagementInbox.text, `%${search}%`));
+    }
+
+    if (authorUsername) {
+      conditions.push(like(engagementInbox.authorUsername, `%${authorUsername}%`));
     }
 
     const rows = conditions.length > 0

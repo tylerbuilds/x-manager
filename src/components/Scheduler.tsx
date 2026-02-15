@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, Plus, Edit, Trash2, Send, Smile, ImageIcon, X, Save, Tag, Clock3, CheckCircle, XCircle, RefreshCw, Loader2, Sparkles } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Send, Smile, ImageIcon, X, Save, Tag, Clock3, CheckCircle, XCircle, RefreshCw, Loader2, Sparkles, ChevronLeft, ChevronRight, List } from 'lucide-react';
 import { MdOutlineGifBox } from "react-icons/md";
 import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-react';
 import { GiphyFetch } from '@giphy/js-fetch-api';
@@ -25,6 +25,14 @@ interface ScheduledPost {
   twitterPostId?: string | null;
   twitter_post_id?: string;
   errorMessage?: string;
+  metrics?: {
+    impressions: number;
+    likes: number;
+    retweets: number;
+    replies: number;
+    quotes: number;
+    bookmarks: number;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +42,21 @@ interface CommunityTag {
   tagName: string;
   communityId: string;
   communityName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+type CalendarViewMode = 'day' | 'week' | 'month' | 'queue';
+
+interface QueueItem {
+  id: number;
+  accountSlot: number;
+  text: string;
+  mediaUrls: string | null;
+  communityId: string | null;
+  position: number;
+  status: string;
+  scheduledPostId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -125,12 +148,27 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
   const [communityTags, setCommunityTags] = useState<CommunityTag[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [draggedPostId, setDraggedPostId] = useState<string | null>(null);
   const [selectedDateTime, setSelectedDateTime] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPost, setEditingPost] = useState<ScheduledPost | null>(null);
   const [showManageTags, setShowManageTags] = useState(false);
   const [visibleSlots, setVisibleSlots] = useState<number[]>([1, 2]);
   
+  // Queue states
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([]);
+  const [queueText, setQueueText] = useState('');
+  const [queueSlot, setQueueSlot] = useState(1);
+  const [isAutoScheduling, setIsAutoScheduling] = useState(false);
+
+  // Search and bulk states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [selectedPostIds, setSelectedPostIds] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
+
   // Form states
   const [postText, setPostText] = useState('');
   const [selectedCommunityTag, setSelectedCommunityTag] = useState('');
@@ -204,7 +242,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
   const fetchScheduledPosts = async () => {
     try {
-      const response = await fetch('/api/scheduler/posts');
+      const response = await fetch('/api/scheduler/posts?include_metrics=true');
       if (response.ok) {
         const posts = await response.json();
         setScheduledPosts(posts);
@@ -225,6 +263,100 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       debugLog.error('Error fetching community tags:', error);
     }
   };
+
+  // Queue functions
+  const fetchQueue = async () => {
+    try {
+      const response = await fetch(`/api/scheduler/queue?account_slot=${queueSlot}`);
+      if (response.ok) {
+        const data = await response.json();
+        setQueueItems(data.items || []);
+      }
+    } catch (error) {
+      debugLog.error('Error fetching queue:', error);
+    }
+  };
+
+  const addToQueue = async () => {
+    if (!queueText.trim()) return;
+    try {
+      const response = await fetch('/api/scheduler/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: queueText.trim(), accountSlot: queueSlot }),
+      });
+      if (response.ok) {
+        setQueueText('');
+        fetchQueue();
+      }
+    } catch (error) {
+      debugLog.error('Error adding to queue:', error);
+    }
+  };
+
+  const removeFromQueue = async (id: number) => {
+    try {
+      await fetch(`/api/scheduler/queue/${id}`, { method: 'DELETE' });
+      fetchQueue();
+    } catch (error) {
+      debugLog.error('Error removing from queue:', error);
+    }
+  };
+
+  const autoScheduleQueue = async () => {
+    setIsAutoScheduling(true);
+    try {
+      const response = await fetch('/api/scheduler/queue/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountSlot: queueSlot }),
+      });
+      if (response.ok) {
+        const result = await response.json();
+        debugLog.log(`Auto-scheduled ${result.scheduled} posts`);
+        fetchQueue();
+        fetchScheduledPosts();
+      }
+    } catch (error) {
+      debugLog.error('Error auto-scheduling:', error);
+    } finally {
+      setIsAutoScheduling(false);
+    }
+  };
+
+  const togglePostSelection = (id: string) => {
+    setSelectedPostIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkAction = async (action: string) => {
+    if (selectedPostIds.size === 0) return;
+    try {
+      const response = await fetch('/api/scheduler/posts/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postIds: Array.from(selectedPostIds), action }),
+      });
+      if (response.ok) {
+        setSelectedPostIds(new Set());
+        setBulkMode(false);
+        fetchScheduledPosts();
+      }
+    } catch (error) {
+      debugLog.error('Bulk action failed:', error);
+    }
+  };
+
+  // Fetch queue when switching to queue view or changing slot
+  useEffect(() => {
+    if (viewMode === 'queue') {
+      fetchQueue();
+    }
+  }, [viewMode, queueSlot]);
 
   const toggleSlotVisibility = (slot: number) => {
     setVisibleSlots(prev => 
@@ -263,6 +395,119 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
     return postsForDate
       .sort((a, b) => new Date(a.scheduledTime).getTime() - new Date(b.scheduledTime).getTime())
       .slice(0, 17);
+  };
+
+  // Month view helpers
+  const getMonthDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startPad = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Monday start
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < startPad; i++) days.push(null);
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      days.push(new Date(year, month, d));
+    }
+    return days;
+  };
+
+  // Day view: hourly slots
+  const getHourSlots = () => {
+    return Array.from({ length: 24 }, (_, h) => h);
+  };
+
+  const getPostsForHour = (date: Date, hour: number) => {
+    return scheduledPosts.filter((post) => {
+      const postDate = new Date(post.scheduledTime);
+      return (
+        postDate.toDateString() === date.toDateString() &&
+        postDate.getHours() === hour &&
+        visibleSlots.includes(post.accountSlot || 1)
+      );
+    });
+  };
+
+  // Filtered posts for search
+  const filteredPosts = scheduledPosts.filter((post) => {
+    if (searchQuery && !post.text.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (statusFilter && post.status !== statusFilter) return false;
+    return true;
+  });
+
+  // Drag-drop handlers
+  const handleDragStart = (postId: string) => {
+    setDraggedPostId(postId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDropOnDate = async (targetDate: Date, targetHour?: number) => {
+    if (!draggedPostId) return;
+    setDraggedPostId(null);
+
+    const post = scheduledPosts.find((p) => String(p.id) === draggedPostId);
+    if (!post || post.status !== 'scheduled') return;
+
+    const newTime = new Date(targetDate);
+    if (targetHour !== undefined) {
+      newTime.setHours(targetHour, 0, 0, 0);
+    } else {
+      // Keep original time, just change date
+      const orig = new Date(post.scheduledTime);
+      newTime.setHours(orig.getHours(), orig.getMinutes(), 0, 0);
+    }
+
+    try {
+      const response = await fetch('/api/scheduler/posts/reschedule', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: Number(draggedPostId), newScheduledTime: newTime.toISOString() }),
+      });
+      if (response.ok) {
+        await fetchScheduledPosts();
+      }
+    } catch (error) {
+      debugLog.error('Failed to reschedule post:', error);
+    }
+  };
+
+  // Navigation helpers for all views
+  const navigatePrev = () => {
+    if (viewMode === 'day') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() - 1);
+      setCurrentDate(d);
+    } else if (viewMode === 'week') {
+      handlePreviousWeek();
+    } else {
+      const d = new Date(currentDate);
+      d.setMonth(d.getMonth() - 1);
+      setCurrentDate(d);
+    }
+  };
+
+  const navigateNext = () => {
+    if (viewMode === 'day') {
+      const d = new Date(currentDate);
+      d.setDate(d.getDate() + 1);
+      setCurrentDate(d);
+    } else if (viewMode === 'week') {
+      handleNextWeek();
+    } else {
+      const d = new Date(currentDate);
+      d.setMonth(d.getMonth() + 1);
+      setCurrentDate(d);
+    }
+  };
+
+  const navigateToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setCurrentWeek(today);
   };
 
   const handlePreviousWeek = () => {
@@ -709,6 +954,49 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         </div>
       )}
 
+      {/* Search and Filter Bar */}
+      {!compact && (
+        <div className="dashboard-card p-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search posts..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            >
+              <option value="">All statuses</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="posted">Posted</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <button
+              onClick={() => { setBulkMode(!bulkMode); setSelectedPostIds(new Set()); }}
+              className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                bulkMode ? 'bg-slate-900 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {bulkMode ? 'Cancel Bulk' : 'Bulk Select'}
+            </button>
+            {bulkMode && selectedPostIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">{selectedPostIds.size} selected</span>
+                <button onClick={() => handleBulkAction('cancel')} className="px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-medium hover:bg-yellow-200">Cancel</button>
+                <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-medium hover:bg-red-200">Delete</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Calendar View */}
       <div className={compact ? "overflow-hidden" : "dashboard-card overflow-hidden"}>
         {/* Calendar Header */}
@@ -716,27 +1004,39 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <h3 className="text-lg font-medium text-gray-900">
-              Week of {formatDateForDisplay(weekDays[0])}
+              {viewMode === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              {viewMode === 'week' && `Week of ${formatDateForDisplay(weekDays[0])}`}
+              {viewMode === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {viewMode === 'queue' && `Content Queue (${queueItems.length} items)`}
             </h3>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={handlePreviousWeek}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                ←
-              </button>
-              <button
-                onClick={() => setCurrentWeek(new Date())}
-                className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                Today
-              </button>
-              <button
-                onClick={handleNextWeek}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors"
-              >
-                →
-              </button>
+            <div className="flex items-center gap-3">
+              {/* View mode toggle */}
+              <div className="flex bg-white border border-slate-200 rounded-lg p-0.5">
+                {(['day', 'week', 'month', 'queue'] as CalendarViewMode[]).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all capitalize ${
+                      viewMode === mode
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {mode === 'queue' ? 'Queue' : mode}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center space-x-1">
+                <button onClick={navigatePrev} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                  <ChevronLeft size={16} />
+                </button>
+                <button onClick={navigateToday} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                  Today
+                </button>
+                <button onClick={navigateNext} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -891,8 +1191,124 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         </div>
         )}
 
-        {/* Desktop View - 7 column grid */}
-        {!compact && (
+        {/* Day View */}
+        {!compact && viewMode === 'day' && (
+          <div className="hidden sm:block">
+            <div className="divide-y divide-gray-200">
+              {getHourSlots().map((hour) => {
+                const hourPosts = getPostsForHour(currentDate, hour);
+                return (
+                  <div
+                    key={hour}
+                    className="flex min-h-[48px] hover:bg-slate-50 transition-colors"
+                    onDragOver={handleDragOver}
+                    onDrop={() => handleDropOnDate(currentDate, hour)}
+                  >
+                    <div className="w-16 flex-shrink-0 py-2 px-3 text-xs text-slate-500 font-medium border-r border-gray-200 bg-gray-50">
+                      {hour.toString().padStart(2, '0')}:00
+                    </div>
+                    <div className="flex-1 p-1 flex flex-wrap gap-1">
+                      {hourPosts.map((post) => (
+                        <div
+                          key={post.id}
+                          draggable={post.status === 'scheduled'}
+                          onDragStart={() => handleDragStart(String(post.id))}
+                          className={`group relative p-2 rounded border text-xs cursor-grab active:cursor-grabbing flex-1 min-w-[200px] max-w-[400px] ${
+                            (post.accountSlot || 1) === 1
+                              ? 'bg-indigo-50/50 border-indigo-100 hover:border-indigo-300'
+                              : 'bg-amber-50/50 border-amber-100 hover:border-amber-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium">{formatTimeForDisplay(post.scheduledTime)}</span>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleEditPost(post)} className="p-1 text-gray-400 hover:text-blue-600"><Edit size={12} /></button>
+                              <button onClick={() => handleDeletePost(post.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={12} /></button>
+                            </div>
+                          </div>
+                          <p className="text-gray-600 line-clamp-2">{post.text}</p>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] ${getStatusColor(post.status)}`}>
+                              {getStatusIcon(post.status)} {post.status}
+                            </span>
+                            <span className="text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded-full text-[10px]">#{post.accountSlot || 1}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Month View */}
+        {!compact && viewMode === 'month' && (
+          <div className="hidden sm:block">
+            {/* Day headers */}
+            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+                <div key={d} className="text-xs font-medium text-gray-600 text-center py-2">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {getMonthDays().map((day, idx) => {
+                if (!day) {
+                  return <div key={`pad-${idx}`} className="min-h-[80px] border-r border-b border-gray-200 bg-gray-50/50" />;
+                }
+                const dayPosts = getPostsForDate(day);
+                const isToday = day.toDateString() === new Date().toDateString();
+                const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                return (
+                  <div
+                    key={day.toISOString()}
+                    className={`min-h-[80px] border-r border-b border-gray-200 p-1 ${isToday ? 'bg-blue-50' : ''} ${!isCurrentMonth ? 'opacity-50' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDrop={() => handleDropOnDate(day)}
+                    onClick={() => {
+                      setCurrentDate(day);
+                      setViewMode('day');
+                    }}
+                  >
+                    <div className={`text-xs font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                      {day.getDate()}
+                    </div>
+                    {dayPosts.length > 0 && (
+                      <div className="flex flex-wrap gap-0.5">
+                        {dayPosts.slice(0, 3).map((post) => (
+                          <div
+                            key={post.id}
+                            draggable={post.status === 'scheduled'}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              handleDragStart(String(post.id));
+                            }}
+                            className={`w-full text-[10px] px-1 py-0.5 rounded truncate cursor-grab ${
+                              (post.accountSlot || 1) === 1
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                            title={post.text}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {formatTimeForDisplay(post.scheduledTime)} {post.text.slice(0, 20)}
+                          </div>
+                        ))}
+                        {dayPosts.length > 3 && (
+                          <span className="text-[10px] text-gray-500 px-1">+{dayPosts.length - 3} more</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Desktop View - 7 column grid (Week) */}
+        {!compact && viewMode === 'week' && (
         <div className="hidden sm:block">
           <div className="grid grid-cols-7 gap-0">
             {weekDays.map((day, index) => {
@@ -905,6 +1321,8 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                   className={`min-h-32 border-r border-b border-gray-200 p-2 ${
                     isToday ? 'bg-blue-50' : 'bg-white'
                   } last:border-r-0`}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDropOnDate(day)}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className={`text-sm font-medium ${
@@ -926,9 +1344,11 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                           {dayPosts.map((post) => (
                                           <div
                                             key={post.id}
-                                            className={`group relative p-2 rounded border text-xs hover:shadow-md transition-all cursor-pointer ${
-                                              (post.accountSlot || 1) === 1 
-                                                ? 'bg-indigo-50/50 border-indigo-100 hover:border-indigo-300' 
+                                            draggable={post.status === 'scheduled'}
+                                            onDragStart={() => handleDragStart(String(post.id))}
+                                            className={`group relative p-2 rounded border text-xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${
+                                              (post.accountSlot || 1) === 1
+                                                ? 'bg-indigo-50/50 border-indigo-100 hover:border-indigo-300'
                                                 : 'bg-amber-50/50 border-amber-100 hover:border-amber-300'
                                             }`}
                                           >
@@ -993,6 +1413,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                               Reply
                             </div>
                           )}
+                          {post.status === 'posted' && post.metrics && (
+                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                              <span title="Likes">♥ {post.metrics.likes}</span>
+                              <span title="Retweets">⟲ {post.metrics.retweets}</span>
+                              <span title="Impressions">👁 {post.metrics.impressions}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1002,6 +1429,89 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
             })}
           </div>
         </div>
+        )}
+
+        {/* Queue View */}
+        {!compact && viewMode === 'queue' && (
+          <div className="p-4 sm:p-6">
+            {/* Queue Controls */}
+            <div className="flex items-center gap-3 mb-4">
+              <select
+                value={queueSlot}
+                onChange={(e) => setQueueSlot(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value={1}>Account #1</option>
+                <option value={2}>Account #2</option>
+              </select>
+              <button
+                onClick={autoScheduleQueue}
+                disabled={isAutoScheduling || queueItems.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isAutoScheduling ? (
+                  <><Loader2 size={14} className="animate-spin" /> Scheduling...</>
+                ) : (
+                  <><Sparkles size={14} /> Auto-Schedule All</>
+                )}
+              </button>
+            </div>
+
+            {/* Add to queue form */}
+            <div className="flex gap-2 mb-6">
+              <textarea
+                value={queueText}
+                onChange={(e) => setQueueText(e.target.value)}
+                placeholder="Write a post to add to the queue..."
+                className="flex-1 p-3 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows={2}
+              />
+              <button
+                onClick={addToQueue}
+                disabled={!queueText.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed self-end transition-colors"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+
+            {/* Queue items list */}
+            {queueItems.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <List size={32} className="mx-auto mb-3 opacity-50" />
+                <p className="text-sm font-medium">Queue is empty</p>
+                <p className="text-xs mt-1">Add posts above and click Auto-Schedule to assign optimal times.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {queueItems.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                  >
+                    <span className="flex-shrink-0 w-6 h-6 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center text-xs font-medium">
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">{item.text}</p>
+                      {item.communityId && (
+                        <span className="inline-block mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                          {communityTags.find(t => t.communityId === item.communityId)?.tagName || 'Community'}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => removeFromQueue(item.id)}
+                      className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Remove from queue"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

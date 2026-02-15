@@ -23,4 +23,14 @@ export function registerNodeInstrumentation(): void {
       console.error('[instrumentation] Action scheduler startup failed:', error);
     }
   })();
+
+  void (async () => {
+    try {
+      const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
+      startMetricsCollectorLoop(900); // 15 minutes
+      console.log('[instrumentation] Metrics collector started (15m interval).');
+    } catch (error) {
+      console.error('[instrumentation] Metrics collector startup failed:', error);
+    }
+  })();
 }

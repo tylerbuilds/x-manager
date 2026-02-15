@@ -2,9 +2,9 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import { NextResponse } from 'next/server';
 import path from 'path';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, like, type SQL } from 'drizzle-orm';
 
-import { db } from '@/lib/db';
+import { db, sqlite } from '@/lib/db';
 import { scheduledPosts } from '@/lib/db/schema';
 import { isAccountSlot, parseAccountSlot, type AccountSlot } from '@/lib/account-slots';
 import { canonicalizeUrl, computeDedupeKey, extractFirstUrl, normalizeCopy } from '@/lib/scheduler-dedupe';
@@ -37,23 +37,105 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const slotParam = url.searchParams.get('account_slot');
-    let slot: AccountSlot | null = null;
+    const search = url.searchParams.get('search')?.trim() || null;
+    const dateFrom = url.searchParams.get('dateFrom') || null;
+    const dateTo = url.searchParams.get('dateTo') || null;
+    const statusFilter = url.searchParams.get('status') || null;
+    const includeMetrics = url.searchParams.get('include_metrics') === 'true';
+
+    const conditions: SQL[] = [];
 
     if (slotParam) {
       const parsed = Number(slotParam);
       if (!Number.isFinite(parsed) || !isAccountSlot(parsed)) {
         return NextResponse.json({ error: 'Invalid account_slot. Use 1 or 2.' }, { status: 400 });
       }
-      slot = parsed;
+      conditions.push(eq(scheduledPosts.accountSlot, parsed));
     }
 
-    const posts = slot
-      ? await db
-          .select()
-          .from(scheduledPosts)
-          .where(eq(scheduledPosts.accountSlot, slot))
-          .orderBy(desc(scheduledPosts.createdAt))
-      : await db.select().from(scheduledPosts).orderBy(desc(scheduledPosts.createdAt));
+    if (search) {
+      conditions.push(like(scheduledPosts.text, `%${search}%`));
+    }
+
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      if (!Number.isNaN(from.getTime())) {
+        conditions.push(gte(scheduledPosts.scheduledTime, from));
+      }
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo);
+      if (!Number.isNaN(to.getTime())) {
+        conditions.push(lte(scheduledPosts.scheduledTime, to));
+      }
+    }
+
+    if (statusFilter) {
+      const validStatuses = ['scheduled', 'posted', 'failed', 'cancelled'] as const;
+      type PostStatus = (typeof validStatuses)[number];
+      if (validStatuses.includes(statusFilter as PostStatus)) {
+        conditions.push(eq(scheduledPosts.status, statusFilter as PostStatus));
+      }
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const posts = await db
+      .select()
+      .from(scheduledPosts)
+      .where(where)
+      .orderBy(desc(scheduledPosts.createdAt));
+
+    // Phase 7: Optionally join latest metrics for posted items
+    if (includeMetrics) {
+      try {
+        const tweetIds = posts
+          .filter((p) => p.twitterPostId)
+          .map((p) => p.twitterPostId);
+
+        if (tweetIds.length > 0) {
+          const placeholders = tweetIds.map(() => '?').join(',');
+          const metricsRows = sqlite.prepare(`
+            SELECT pm1.*
+            FROM post_metrics pm1
+            INNER JOIN (
+              SELECT twitter_post_id, MAX(fetched_at) as max_fetched
+              FROM post_metrics
+              WHERE twitter_post_id IN (${placeholders})
+              GROUP BY twitter_post_id
+            ) pm2 ON pm1.twitter_post_id = pm2.twitter_post_id AND pm1.fetched_at = pm2.max_fetched
+          `).all(...tweetIds) as Array<{
+            twitter_post_id: string;
+            impressions: number;
+            likes: number;
+            retweets: number;
+            replies: number;
+            quotes: number;
+            bookmarks: number;
+          }>;
+
+          const metricsMap = new Map(metricsRows.map((m) => [m.twitter_post_id, m]));
+
+          return NextResponse.json(posts.map((post) => {
+            const metrics = post.twitterPostId ? metricsMap.get(post.twitterPostId) : null;
+            return {
+              ...post,
+              metrics: metrics ? {
+                impressions: metrics.impressions,
+                likes: metrics.likes,
+                retweets: metrics.retweets,
+                replies: metrics.replies,
+                quotes: metrics.quotes,
+                bookmarks: metrics.bookmarks,
+              } : null,
+            };
+          }));
+        }
+      } catch {
+        // Fall through to return without metrics
+      }
+    }
 
     return NextResponse.json(posts);
   } catch (error) {
