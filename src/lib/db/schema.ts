@@ -325,3 +325,16 @@ export const contentQueue = sqliteTable('content_queue', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
+
+export const agentWebhooks = sqliteTable('agent_webhooks', {
+  id: integer('id').primaryKey(),
+  url: text('url').notNull(),
+  events: text('events').notNull(), // JSON array of event names
+  secret: text('secret'), // HMAC signing secret (optional)
+  active: integer('active', { mode: 'boolean' }).notNull().default(true),
+  description: text('description'),
+  failureCount: integer('failure_count').notNull().default(0),
+  lastDeliveredAt: integer('last_delivered_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});

@@ -441,6 +441,22 @@ export function ensureSchema(sqlite: SqliteDb): void {
     );
     CREATE INDEX IF NOT EXISTS idx_content_queue_slot_status
       ON content_queue(account_slot, status, position);
+
+    -- Agent Webhooks
+    CREATE TABLE IF NOT EXISTS agent_webhooks (
+      id INTEGER PRIMARY KEY,
+      url TEXT NOT NULL,
+      events TEXT NOT NULL,
+      secret TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      description TEXT,
+      failure_count INTEGER NOT NULL DEFAULT 0,
+      last_delivered_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_agent_webhooks_active
+      ON agent_webhooks(active);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks

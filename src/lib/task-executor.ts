@@ -121,17 +121,133 @@ function completeRun(runId: number, status: 'completed' | 'failed' | 'cancelled'
 // Task type executors
 // ---------------------------------------------------------------------------
 
+const RESEARCH_STOP_WORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+  'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+  'should', 'may', 'might', 'can', 'shall', 'to', 'of', 'in', 'for',
+  'on', 'with', 'at', 'by', 'from', 'as', 'into', 'through', 'during',
+  'before', 'after', 'above', 'below', 'between', 'and', 'but', 'or',
+  'nor', 'not', 'so', 'yet', 'both', 'either', 'neither', 'each',
+  'every', 'all', 'any', 'few', 'more', 'most', 'other', 'some', 'such',
+  'no', 'only', 'own', 'same', 'than', 'too', 'very', 'just', 'about',
+  'research', 'find', 'search', 'look', 'discover',
+]);
+
+function extractResearchKeywords(
+  task: typeof campaignTasks.$inferSelect,
+  details: Record<string, unknown>,
+): string[] {
+  // 1. Explicit keywords from details
+  if (details.keywords) {
+    if (Array.isArray(details.keywords)) {
+      const arr = (details.keywords as string[]).map((k) => k.trim()).filter(Boolean);
+      if (arr.length > 0) return arr;
+    }
+    if (typeof details.keywords === 'string') {
+      const arr = (details.keywords as string).split(',').map((k) => k.trim()).filter(Boolean);
+      if (arr.length > 0) return arr;
+    }
+  }
+
+  // 2. Fallback: split task title, filter stop words
+  if (task.title) {
+    const words = task.title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !RESEARCH_STOP_WORDS.has(w));
+    if (words.length > 0) return words;
+  }
+
+  // 3. Fallback: topic or query from details
+  if (typeof details.topic === 'string' && details.topic.trim()) {
+    return [details.topic.trim()];
+  }
+  if (typeof details.query === 'string' && details.query.trim()) {
+    return [details.query.trim()];
+  }
+
+  return [];
+}
+
 async function executeResearchTask(
-  _task: typeof campaignTasks.$inferSelect,
-  _details: Record<string, unknown>,
+  task: typeof campaignTasks.$inferSelect,
+  details: Record<string, unknown>,
 ): Promise<{ output: unknown }> {
-  // Placeholder: real implementation would call discovery / search APIs
-  return {
-    output: {
-      summary: 'Research placeholder - discovery APIs not yet integrated.',
-      collectedAt: new Date().toISOString(),
-    },
-  };
+  const keywords = extractResearchKeywords(task, details);
+
+  if (keywords.length === 0) {
+    return {
+      output: {
+        summary: 'Research skipped: no keywords could be extracted from the task.',
+        keywords: [],
+        collectedAt: new Date().toISOString(),
+      },
+    };
+  }
+
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.XM_BASE_URL || 'http://127.0.0.1:3999';
+  const params = new URLSearchParams({
+    keywords: keywords.join(','),
+    lang: (details.language as string) || 'en',
+    limit: String(details.limit || 10),
+  });
+
+  try {
+    const response = await fetch(`${baseUrl}/api/discovery/topics?${params}`, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      const errorMessage = `Discovery API returned ${response.status}: ${body.slice(0, 200)}`;
+      return {
+        output: {
+          summary: `Research failed: ${errorMessage}`,
+          keywords,
+          error: errorMessage,
+          collectedAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    const data = await response.json();
+    const topics: Array<{
+      id: string;
+      text: string;
+      url: string;
+      author?: { username: string | null };
+      relevanceScore: number;
+      metrics: { likes: number; replies: number; reposts: number; quotes: number };
+    }> = data.topics ?? [];
+
+    return {
+      output: {
+        summary: `Found ${topics.length} relevant posts for keywords: ${keywords.join(', ')}`,
+        keywords,
+        topicCount: topics.length,
+        topics: topics.slice(0, 5).map((t) => ({
+          id: t.id,
+          text: t.text,
+          url: t.url,
+          author: t.author?.username,
+          relevanceScore: t.relevanceScore,
+          metrics: t.metrics,
+        })),
+        collectedAt: new Date().toISOString(),
+      },
+    };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown fetch error';
+    return {
+      output: {
+        summary: `Research failed: ${errorMessage}`,
+        keywords,
+        error: errorMessage,
+        collectedAt: new Date().toISOString(),
+      },
+    };
+  }
 }
 
 async function executePostTask(

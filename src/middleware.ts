@@ -11,6 +11,50 @@ const PUBLIC_API_PREFIXES = [
   '/api/twitter/auth/callback',
 ];
 
+const GLOBAL_RATE_LIMIT_PER_MIN = 120;
+
+type RateBucket = { minute: number; count: number };
+const globalRateBuckets = new Map<string, RateBucket>();
+
+function getClientIpFromRequest(req: NextRequest): string {
+  const forwarded = req.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const ip = forwarded.split(',')[0]?.trim();
+    if (ip) return ip;
+  }
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+  return 'local';
+}
+
+function checkGlobalRate(req: NextRequest): { ok: boolean; retryAfter: number } {
+  const minute = Math.floor(Date.now() / 60_000);
+  const ip = getClientIpFromRequest(req);
+
+  // Prune old entries
+  if (globalRateBuckets.size > 4096) {
+    for (const [key, bucket] of globalRateBuckets.entries()) {
+      if (bucket.minute < minute - 2) {
+        globalRateBuckets.delete(key);
+      }
+    }
+  }
+
+  const existing = globalRateBuckets.get(ip);
+  if (!existing || existing.minute !== minute) {
+    globalRateBuckets.set(ip, { minute, count: 1 });
+    return { ok: true, retryAfter: 0 };
+  }
+
+  if (existing.count >= GLOBAL_RATE_LIMIT_PER_MIN) {
+    const elapsed = Math.floor((Date.now() % 60_000) / 1000);
+    return { ok: false, retryAfter: Math.max(1, 60 - elapsed) };
+  }
+
+  existing.count += 1;
+  return { ok: true, retryAfter: 0 };
+}
+
 function stableTrim(value: string | undefined): string {
   return (value || '').trim();
 }
@@ -153,6 +197,21 @@ export async function middleware(req: NextRequest) {
 
   if (isPublicApiPath(pathname)) {
     return NextResponse.next();
+  }
+
+  // Global rate limiting
+  const rate = checkGlobalRate(req);
+  if (!rate.ok) {
+    return NextResponse.json(
+      { error: 'Too many requests.', code: 'RATE_LIMIT_EXCEEDED' },
+      {
+        status: 429,
+        headers: {
+          'Cache-Control': 'no-store',
+          'Retry-After': String(rate.retryAfter),
+        },
+      },
+    );
   }
 
   if (!isAuthRequired()) {
