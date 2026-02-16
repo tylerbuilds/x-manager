@@ -65,12 +65,16 @@ npm --version    # 10.x.x
 ### 2. Clone and Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/x-manager.git
+git clone https://github.com/tylerbuilds/x-manager.git
 cd x-manager
 npm install
 ```
 
 ### 3. Set Up Your X Developer App
+
+X now uses a **pay-per-use credit system** (launched January 2026) instead of fixed monthly tiers. You buy credits upfront and pay per API call -- roughly **$0.005 per post read**, **$0.01 per post created**, and **$0.01 per user lookup**. Only successful responses are billed, and duplicate requests on the same day are deduplicated. This makes it very affordable for personal and small-scale use. X-Manager includes built-in cost controls (caching, result caps, usage monitoring) to help you stay on top of spending.
+
+To get started:
 
 1. Go to the [X Developer Portal](https://developer.x.com/en/portal/dashboard)
 2. Create a new app (or use an existing one)
@@ -323,12 +327,12 @@ npm run lint
 
 ## Cost Controls (PAYG)
 
-X-Manager is designed for the X API pay-as-you-go model:
+X's API uses a pay-per-use credit system (~$0.005/read, ~$0.01/post). X-Manager is built to keep your costs low:
 
-- Topic discovery results capped at 25 per request
-- 15-minute cache prevents repeated billable API calls
-- Usage monitoring endpoint shows daily/weekly/monthly consumption
-- All these help you stay aware of and manage your API costs
+- **Discovery cache** -- 15-minute TTL prevents repeated billable search calls
+- **Result caps** -- topic discovery limited to 25 results per request
+- **Usage dashboard** -- monitor daily/weekly/monthly API consumption via `GET /api/usage/tweets?days=7`
+- **Deduplication** -- scheduled post dedupe keys prevent accidental double-posts
 
 ---
 
@@ -376,12 +380,6 @@ If you changed `NEXT_PUBLIC_APP_URL`, update the callback URL in your X app sett
 ### Database locked errors
 
 This can happen if multiple processes access the same SQLite file. Make sure only one instance of X-Manager is running, or use the scheduler lock mechanism.
-
----
-
-## Project Origin
-
-X-Manager is forked from [`dylee9/open-platter`](https://github.com/dylee9/open-platter) and significantly extended with multi-account support, engagement tools, analytics, agent automation, and production hardening.
 
 ---
 
