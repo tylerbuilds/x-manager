@@ -30,7 +30,31 @@ function deriveKeyFromConfig(): Buffer | null {
     return null;
   }
 
-  return crypto.createHash('sha256').update('x-manager-dev-fallback-key').digest();
+  // In development, generate a random key persisted to disk so it survives restarts
+  // but is never committed to git (var/ is gitignored).
+  const fs = require('fs') as typeof import('fs');
+  const path = require('path') as typeof import('path');
+  const keyPath = path.resolve(process.cwd(), 'var', '.dev-encryption-key');
+
+  try {
+    const existing = fs.readFileSync(keyPath, 'utf8').trim();
+    if (existing.length >= 32) {
+      return crypto.createHash('sha256').update(existing).digest();
+    }
+  } catch {
+    // Key file doesn't exist yet -- generate one.
+  }
+
+  try {
+    fs.mkdirSync(path.dirname(keyPath), { recursive: true });
+    const randomKey = crypto.randomBytes(32).toString('hex');
+    fs.writeFileSync(keyPath, randomKey, { mode: 0o600 });
+    console.warn('[crypto-store] Generated new dev encryption key at var/.dev-encryption-key');
+    return crypto.createHash('sha256').update(randomKey).digest();
+  } catch (err) {
+    console.warn('[crypto-store] Could not persist dev encryption key, using ephemeral key:', err);
+    return crypto.randomBytes(32);
+  }
 }
 
 function requireEncryptionKey(): Buffer {

@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { db } from '@/lib/db';
 import { agentWebhooks } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { assertPublicUrl } from '@/lib/network-safety';
 
 export type WebhookEvent =
   | 'post.published'
@@ -69,6 +70,9 @@ async function deliverWebhook(
   }
 
   try {
+    // Prevent SSRF: block webhooks targeting private/internal networks
+    assertPublicUrl(webhook.url);
+
     const response = await fetch(webhook.url, {
       method: 'POST',
       headers,

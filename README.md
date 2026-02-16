@@ -1,226 +1,399 @@
-# X Manager
+# X-Manager
 
-X Manager is a self-hosted app for:
-- connecting up to two X accounts
-- creating and scheduling posts
-- bulk importing posts from CSV
-- auto-posting scheduled content via cron
-- finding relevant recent topics to reply to
-- checking X usage data to track pay-as-you-go consumption
+> Self-hosted social media management for X (Twitter). Schedule posts, manage multiple accounts, engage with your audience, and automate campaigns -- all from a single dashboard you control.
 
-This repo is bootstrapped from [`dylee9/open-platter`](https://github.com/dylee9/open-platter) and adapted for current X API usage (`api.x.com`) plus PAYG-aware workflows.
+**Alpha v0.1.3** | MIT License | Built with Next.js + SQLite
 
-## What was reused vs added
+---
 
-### Reused boilerplate
-- Next.js app shell and dashboard UI
-- OAuth connection flow
-- SQLite + Drizzle schema and scheduler CRUD APIs
-- Cron worker pattern for publishing scheduled posts
+## What Is This?
 
-### Added in this repo
-- `X_*` env support with backward compatibility for `TWITTER_*`
-- `api.x.com` base URL defaults
-- optional scheduled **reply** support (`reply_to_tweet_id`)
-- CSV import API + UI preview/validation flow
-- CLI CSV import command (`npm run import:csv`)
-- in-app scheduler auto-start (no second process required by default)
-- auto schema initialization on startup (no manual migration command required)
-- readiness API + dashboard panel (`/api/system/readiness`)
-- topic discovery API (`/api/discovery/topics`) with engagement+recency ranking
-- discovery cache table (`topic_search_cache`) to reduce repeated paid calls
-- usage endpoint proxy (`/api/usage/tweets`) to inspect `/2/usage/tweets`
-- Topic Discovery UI panel in the dashboard
+X-Manager is a **self-hosted web app** that gives you a unified dashboard to manage your X/Twitter presence. Think of it as a lightweight, privacy-first alternative to Hootsuite or Buffer that runs entirely on your own machine or server.
 
-## Prerequisites
+You connect your X account(s) via OAuth, and X-Manager handles the rest:
 
-- Node.js 20-25
-- npm
-- X developer app credentials
+- **Schedule posts** with a visual calendar or bulk CSV import
+- **Manage 2 accounts** side-by-side from one interface
+- **Auto-publish** on schedule via built-in cron (no extra processes needed)
+- **Track engagement** with an inbox for mentions and DMs
+- **Discover topics** to engage with using keyword search
+- **Monitor analytics** -- impressions, likes, retweets, best posting times
+- **Run campaigns** with an AI-powered agent engine (optional)
+- **Bridge API** for external bots to publish through your accounts
 
-## X App Setup
+### Why Self-Hosted?
 
-1. Create an app in the X developer console.
-2. Enable OAuth 1.0a user auth.
-3. Set app permissions to **Read and write**.
-4. Use a **Web App** (not Desktop) if you want redirect-based auth. If your app is Desktop, X requires the PIN ("oob") flow; X Manager will prompt you to paste the verifier after authorizing.
-5. Add callback URL:
-   - `http://localhost:3999/api/twitter/auth/callback`
-6. Collect:
-   - API key
-   - API secret
-   - app-only bearer token
+Your API keys and OAuth tokens **never leave your machine**. All credentials are encrypted at rest with AES-256-GCM. No third-party SaaS sees your data.
 
-## Environment
+---
 
-Environment variables are optional for core setup. You can configure credentials in-app from the **First-Run Setup** card.
+## Quick Start
 
-Use `env.example` only when you want to override saved settings at runtime:
+### 1. Prerequisites
+
+X-Manager is built and tested on **Ubuntu 22.04 / 24.04** (any modern Linux distro works). It also runs on macOS and WSL2.
+
+You need:
+
+| Requirement | Version | How to Install (Ubuntu) |
+|-------------|---------|------------------------|
+| **Node.js** | 20 - 25 | `curl -fsSL https://deb.nodesource.com/setup_20.x \| sudo bash - && sudo apt install -y nodejs` |
+| **npm** | 10+ | Comes with Node.js |
+| **build-essential** | any | `sudo apt install -y build-essential python3` (needed for `better-sqlite3` native module) |
+| **Git** | any | `sudo apt install -y git` |
+
+**Full Ubuntu setup from scratch:**
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt install -y nodejs
+
+# Install build tools (required for native SQLite module)
+sudo apt install -y build-essential python3 git
+
+# Verify
+node --version   # v20.x.x
+npm --version    # 10.x.x
+```
+
+### 2. Clone and Install
+
+```bash
+git clone https://github.com/YOUR_USERNAME/x-manager.git
+cd x-manager
+npm install
+```
+
+### 3. Set Up Your X Developer App
+
+1. Go to the [X Developer Portal](https://developer.x.com/en/portal/dashboard)
+2. Create a new app (or use an existing one)
+3. Enable **OAuth 1.0a** user authentication
+4. Set app permissions to **Read and Write**
+5. Choose **Web App** type (not Desktop)
+6. Add this callback URL: `http://localhost:3999/api/twitter/auth/callback`
+7. Note down your **API Key**, **API Secret**, and **Bearer Token**
+
+### 4. Start X-Manager
+
+```bash
+npm run dev
+```
+
+Open **http://localhost:3999** in your browser.
+
+On first run you'll see a **Setup Panel** where you can paste your X API credentials directly in the browser. No `.env` file needed for basic setup.
+
+### 5. Connect Your X Account
+
+Click the **Connect** button in the dashboard. You'll be redirected to X to authorize the app, then back to X-Manager with your account connected.
+
+That's it. You're ready to schedule your first post.
+
+---
+
+## Features
+
+### Content Scheduling
+
+- Create posts with up to 4 images
+- Schedule for specific dates/times or add to a queue
+- Thread support (multi-post threads with automatic reply chaining)
+- Reply-to support for targeting specific conversations
+- Community post support
+
+### Bulk CSV Import
+
+Import dozens of posts at once from a CSV file, either via the web UI or CLI:
+
+```csv
+text,scheduled_time,community_id,reply_to_tweet_id,account_slot
+"Shipping a new feature today!",2026-02-11 09:30,,,1
+"Weekly notes are live",2026-02-12T14:00:00,,,1
+```
+
+**Column names are flexible** -- `text`, `tweet`, `post`, or `content` all work for the post body.
+
+```bash
+# CLI import with preview
+npm run import:csv -- --file ./posts.csv --dry-run
+
+# Import with custom scheduling
+npm run import:csv -- --file ./posts.csv --interval-minutes 45 --start-time "2026-03-01T09:00:00"
+
+# Target account slot 2
+npm run import:csv -- --file ./posts.csv --account-slot 2
+```
+
+### Multi-Account Support
+
+Connect up to **2 X accounts** (slot 1 and slot 2). Each account has its own OAuth credentials, and you can target posts to either account.
+
+### Engagement Inbox
+
+- View incoming mentions and DMs in one place
+- Tag and categorize conversations
+- Add internal notes
+- Quick-reply with saved templates
+- Track status (new, reviewed, replied, dismissed)
+
+### Analytics Dashboard
+
+- Post-level metrics: impressions, likes, retweets, replies, quotes, bookmarks
+- Engagement trends over time
+- Best posting times analysis
+- API usage monitoring (great for PAYG cost awareness)
+
+### Topic Discovery
+
+Search for relevant conversations to engage with. Results are ranked by engagement + recency, with a 15-minute cache to keep API costs low.
+
+### Agent Campaigns (Experimental)
+
+Define campaign objectives and let an AI agent plan and execute tasks:
+- Automated task breakdown (post, reply, DM, like, research)
+- Human approval workflow for sensitive actions
+- Durable run history with step-by-step logs
+- Webhook notifications for external integrations
+
+### Bridge API
+
+Let external bots publish through X-Manager with full security:
+
+```bash
+curl -X POST http://localhost:3999/api/bridge/openclaw/post \
+  -H "Authorization: Bearer $BRIDGE_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"content": "Hello from my bot!", "account_slot": 1}'
+```
+
+Supports token auth, optional HMAC request signing, rate limiting, and SSRF protection.
+
+---
+
+## Configuration
+
+### Environment Variables (Optional)
+
+You can configure everything from the in-app Setup Panel. Environment variables are only needed if you want to override saved settings or lock down production deployments.
 
 ```bash
 cp env.example .env.local
 ```
 
-Values from environment variables take precedence over saved setup values.
+**Key variables:**
 
-If you want OpenClaw (or another external bot) to publish immediately through this app, set:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `X_API_KEY` | _(in-app)_ | Your X app API key |
+| `X_API_SECRET` | _(in-app)_ | Your X app API secret |
+| `X_BEARER_TOKEN` | _(in-app)_ | App-only bearer token for discovery + usage |
+| `NEXT_PUBLIC_APP_URL` | `http://localhost:3999` | OAuth callback base URL |
+| `X_MANAGER_ADMIN_TOKEN` | _(none)_ | Password for the admin login screen |
+| `X_MANAGER_ENCRYPTION_KEY` | _(auto in dev)_ | Encryption key for stored credentials |
+| `X_MANAGER_REQUIRE_AUTH` | `true` | Require login to access the app |
+| `SCHEDULER_INTERVAL_SECONDS` | `60` | How often the scheduler checks for posts to publish |
+| `DISABLE_IN_APP_SCHEDULER` | `false` | Set `true` to use the standalone cron worker instead |
+
+See `env.example` for the complete list with descriptions.
+
+### Production Deployment
+
+For production use, you **must** set:
 
 ```bash
-OPENCLAW_BRIDGE_TOKEN=replace-with-a-long-random-secret
-OPENCLAW_BRIDGE_SIGNING_SECRET=replace-with-a-second-long-random-secret
-OPENCLAW_BRIDGE_REQUIRE_SIGNATURE=true
-OPENCLAW_BRIDGE_ALLOWED_SLOTS=1
-OPENCLAW_BRIDGE_MEDIA_HOST_ALLOWLIST=swarmsignal.net
+X_MANAGER_ADMIN_TOKEN=your-strong-random-password
+X_MANAGER_ENCRYPTION_KEY=your-32-byte-random-key
+X_MANAGER_SESSION_SECRET=another-random-secret
+X_MANAGER_STRICT_BOOT=true
+NODE_ENV=production
 ```
 
-## Install and Run
+Generate secure random values:
 
 ```bash
-npm install
+# Generate a 32-byte hex key
+openssl rand -hex 32
+```
+
+---
+
+## Running in Production
+
+### Option A: Daemon Mode
+
+```bash
+npm run build
+npm run dev:daemon    # Starts as a background process
+npm run dev:status    # Check if it's running
+npm run dev:logs      # Tail the logs
+npm run dev:stop      # Stop the daemon
+```
+
+### Option B: Systemd Service (Recommended for Linux)
+
+```bash
+npm run install:systemd-user
+```
+
+This creates a user-level systemd service that auto-starts on boot.
+
+### Option C: Standalone Cron Worker
+
+If you want to separate the web UI from the scheduler:
+
+```bash
+# Terminal 1: Web UI only
+DISABLE_IN_APP_SCHEDULER=true npm start
+
+# Terminal 2: Dedicated scheduler
+npm run cron:run
+```
+
+---
+
+## Database
+
+X-Manager uses **SQLite** -- no database server to install or configure. The database file lives at `var/x-manager.sqlite.db` and is created automatically on first run.
+
+- **WAL mode** for concurrent read/write performance
+- **Auto-migration** -- schema updates are applied automatically on startup
+- **Encrypted credentials** -- API keys and OAuth tokens stored with AES-256-GCM
+
+To back up your data, just copy the `var/` directory.
+
+---
+
+## API Reference
+
+X-Manager exposes a REST API (all routes under `/api/`). Key endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/system/readiness` | Health check and system status |
+| `POST` | `/api/system/auth/login` | Login with admin token |
+| `POST` | `/api/twitter/auth/start` | Start OAuth flow |
+| `GET/POST` | `/api/scheduler/posts` | List/create scheduled posts |
+| `POST` | `/api/scheduler/import-csv` | Bulk import posts from CSV |
+| `GET` | `/api/discovery/topics?keywords=ai,agents` | Search for topics |
+| `GET` | `/api/usage/tweets?days=7` | X API usage stats |
+| `GET` | `/api/analytics/overview` | Engagement analytics |
+| `GET` | `/api/engagement/inbox` | Inbox items |
+| `POST` | `/api/bridge/openclaw/post` | Bridge API for external bots |
+| `GET/POST` | `/api/agent/campaigns` | Campaign management |
+
+All endpoints require authentication when `X_MANAGER_REQUIRE_AUTH=true` (default).
+
+---
+
+## Development
+
+```bash
+# Start dev server with hot reload
 npm run dev
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Lint
+npm run lint
 ```
 
-Open [http://localhost:3999](http://localhost:3999).
+### Tech Stack
 
-If you want the dev server to stay running after you close your terminal/session:
+- **Next.js 14** (React 18) -- full-stack web framework
+- **TypeScript** -- end-to-end type safety
+- **SQLite** (better-sqlite3) -- zero-config embedded database
+- **Drizzle ORM** -- type-safe database access
+- **Tailwind CSS** -- utility-first styling
+- **OAuth 1.0a** -- X API authentication
+- **node-cron** -- scheduled task execution
+- **Vitest** -- fast unit testing
+
+---
+
+## Cost Controls (PAYG)
+
+X-Manager is designed for the X API pay-as-you-go model:
+
+- Topic discovery results capped at 25 per request
+- 15-minute cache prevents repeated billable API calls
+- Usage monitoring endpoint shows daily/weekly/monthly consumption
+- All these help you stay aware of and manage your API costs
+
+---
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the full security policy.
+
+**Highlights:**
+- AES-256-GCM encryption for all stored credentials
+- HMAC-signed sessions with configurable TTL
+- SSRF protection on webhook delivery and media fetches
+- Rate limiting on sensitive endpoints
+- Production boot refuses to start without encryption configured
+
+---
+
+## Troubleshooting
+
+### `better-sqlite3` fails to install
+
+This native module needs C++ build tools:
 
 ```bash
-npm run dev:daemon
-npm run dev:status
-npm run dev:logs
-npm run dev:stop
+sudo apt install -y build-essential python3
+npm rebuild better-sqlite3
 ```
 
-Default behavior:
-- Database tables are auto-created on first run.
-- Scheduler runs in-app automatically every 60 seconds.
-- You can paste credentials into the in-app setup panel, then connect your X account once.
-- You can paste credentials into the in-app setup panel, then connect account slot `1` and/or `2`.
-
-Optional dedicated worker mode:
+### Port 3999 already in use
 
 ```bash
-DISABLE_IN_APP_SCHEDULER=true npm run cron:run
+# Find what's using the port
+lsof -i :3999
+
+# Or use a different port
+PORT=4000 npm run dev
 ```
 
-## CSV Import (UI)
+### OAuth callback fails
 
-Open the **CSV Tweet Import** card in the dashboard and upload your file.
+Make sure your X app's callback URL matches exactly:
+`http://localhost:3999/api/twitter/auth/callback`
 
-Supported columns:
-- `text` (or `tweet`, `post`, `content`) - required
-- `scheduled_time` (or `scheduled_at`, `date`) - optional
-- `community_id` - optional
-- `reply_to_tweet_id` - optional
-- `account_slot` (`1` or `2`) - optional
+If you changed `NEXT_PUBLIC_APP_URL`, update the callback URL in your X app settings to match.
 
-If a row has no schedule, X Manager auto-assigns times using your selected interval/start time.
+### Database locked errors
 
-Example:
+This can happen if multiple processes access the same SQLite file. Make sure only one instance of X-Manager is running, or use the scheduler lock mechanism.
 
-```csv
-text,scheduled_time,community_id,reply_to_tweet_id,account_slot
-"Shipping a new feature today!",2026-02-11 09:30,,,1
-"Agree with this take on agent tooling",,123456,1893289302711484472,2
-"Weekly growth notes are live",2026-02-12T14:00:00,,,1
-```
+---
 
-## CSV Import (CLI)
+## Project Origin
 
-```bash
-npm run import:csv -- --file ./tweets.csv --dry-run
-npm run import:csv -- --file ./tweets.csv --interval-minutes 45 --start-time "2026-02-10T09:00:00"
-npm run import:csv -- --file ./tweets.csv --account-slot 2
-```
+X-Manager is forked from [`dylee9/open-platter`](https://github.com/dylee9/open-platter) and significantly extended with multi-account support, engagement tools, analytics, agent automation, and production hardening.
 
-CLI flags:
-- `--file` required
-- `--dry-run` optional
-- `--interval-minutes` optional (default `60`)
-- `--start-time` optional (used when schedule is missing)
-- `--reschedule-past false` optional (default is true)
-- `--account-slot` optional (default `1`; row-level `account_slot` overrides it)
+---
 
-## PAYG Cost Controls in this repo
+## Contributing
 
-- Topic discovery result cap: max 25 posts/request
-- Discovery cache TTL: 15 minutes (`topic_search_cache` table)
-- Usage visibility route: `GET /api/usage/tweets?days=7` (`days` supports `1-90`)
+Contributions are welcome! Please:
 
-These guardrails are designed to avoid unnecessary repeated billable reads while still keeping discovery current.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes
+4. Push to your fork and open a Pull Request
 
-## Key API Routes
+---
 
-- `GET /api/system/readiness`
-- `GET/PUT /api/system/settings`
-- `POST /api/twitter/auth/start`
-- `GET /api/twitter/auth/callback`
-- `GET/DELETE /api/user` (multi-account slot status + disconnect)
-- `GET/POST/DELETE /api/scheduler/posts`
-- `PUT/DELETE /api/scheduler/posts/:id`
-- `GET /api/discovery/topics?keywords=ai,agents&limit=10`
-- `GET /api/usage/tweets?days=7`
-- `POST /api/scheduler/import-csv`
-- `POST /api/bridge/openclaw/post` (requires `Authorization: Bearer <OPENCLAW_BRIDGE_TOKEN>`)
+## License
 
-## OpenClaw Bridge API
-
-Use this route for bot-triggered immediate posting:
-
-```bash
-curl -sS -X POST http://127.0.0.1:3999/api/bridge/openclaw/post \
-  -H "Authorization: Bearer $OPENCLAW_BRIDGE_TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "content": "Bridge post from OpenClaw",
-    "account": "swarm_signal",
-    "images": ["/uploads/example.jpg"],
-    "dryRun": false
-  }'
-```
-
-For signed requests (recommended), generate:
-- `x-openclaw-timestamp`: current unix timestamp in seconds
-- `x-openclaw-signature`: `HMAC_SHA256(OPENCLAW_BRIDGE_SIGNING_SECRET, "<timestamp>.<raw-json-body>")`
-
-Example signed call:
-```bash
-BODY='{"content":"Bridge post from OpenClaw","account":"swarm_signal","images":[],"dryRun":true}'
-TS="$(date +%s)"
-SIG="$(printf '%s' "$TS.$BODY" | openssl dgst -sha256 -hmac "$OPENCLAW_BRIDGE_SIGNING_SECRET" -hex | awk '{print $2}')"
-
-curl -sS -X POST http://127.0.0.1:3999/api/bridge/openclaw/post \
-  -H "Authorization: Bearer $OPENCLAW_BRIDGE_TOKEN" \
-  -H "x-openclaw-timestamp: $TS" \
-  -H "x-openclaw-signature: $SIG" \
-  -H 'Content-Type: application/json' \
-  -d "$BODY"
-```
-
-Supported body fields:
-- Text: `text` or `content` or `message` or `tweet_text` (one required)
-- Account target: `account_slot|slot` or `account|handle|username` (default slot `1`)
-- Media: `media_urls|mediaUrls|images` (up to 4; supports `/uploads/...` and public `http/https` image URLs)
-- Optional: `community_id|communityId`, `reply_to_tweet_id|replyToTweetId|reply_to`
-- Dry-run toggle: `dry_run|dryRun|simulate` (`true` validates payload/auth without publishing)
-
-Security controls:
-- Token auth is required.
-- Optional HMAC request signing + timestamp verification + replay protection.
-- Default allowed slot is `1` (`OPENCLAW_BRIDGE_ALLOWED_SLOTS`).
-- Per-client rate limiting (`OPENCLAW_BRIDGE_RATE_LIMIT_PER_MIN`).
-- Media SSRF protections (private-network blocking, redirect checks, optional host allowlist).
-
-## Data Model Changes
-
-- `scheduled_posts.reply_to_tweet_id` added
-- `scheduled_posts.account_slot` added
-- new table: `x_accounts` (slot-based account storage: 1 or 2)
-- new table: `topic_search_cache`
-- new table: `app_settings` (stores in-app setup values)
-
-## Notes
-
-- Media upload still uses the legacy upload host (`upload.twitter.com`) by default; override with `X_UPLOAD_API_BASE_URL` if needed.
-- Topic discovery requires `X_BEARER_TOKEN` (app auth), while posting/scheduling requires user OAuth credentials.
-- Readiness status is visible in-app via the **System Readiness** panel.
+[MIT](LICENSE) -- see LICENSE file for details.

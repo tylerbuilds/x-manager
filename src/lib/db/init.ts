@@ -34,7 +34,20 @@ function execWithRetry(sqlite: SqliteDb, sqlText: string, attempts = 8, delayMs 
   }
 }
 
+const KNOWN_TABLES = new Set([
+  'user', 'x_accounts', 'scheduled_posts', 'community_tags', 'system_prompts',
+  'topic_search_cache', 'app_settings', 'scheduler_locks', 'engagement_inbox',
+  'engagement_actions', 'campaigns', 'campaign_tasks', 'campaign_approvals',
+  'api_idempotency', 'agent_runs', 'agent_run_steps', 'scheduled_actions',
+  'x_api_calls', 'engagement_cursors', 'inbox_tags', 'inbox_notes',
+  'draft_posts', 'post_templates', 'post_metrics', 'saved_replies',
+  'content_queue', 'agent_webhooks',
+]);
+
 function hasColumn(sqlite: SqliteDb, tableName: string, columnName: string): boolean {
+  if (!KNOWN_TABLES.has(tableName)) {
+    throw new Error(`hasColumn called with unknown table: ${tableName}`);
+  }
   const rows = sqlite.prepare(`PRAGMA table_info(${tableName})`).all() as Array<{ name: string }>;
   return rows.some((row) => row.name === columnName);
 }

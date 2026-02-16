@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { agentWebhooks } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { assertPublicUrl } from '@/lib/network-safety';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,9 +47,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    new URL(body.url);
-  } catch {
-    return NextResponse.json({ error: 'url must be a valid URL.', code: 'VALIDATION_ERROR' }, { status: 400 });
+    assertPublicUrl(body.url);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'url must be a valid public URL.', code: 'VALIDATION_ERROR' }, { status: 400 });
   }
 
   if (!body.events || !Array.isArray(body.events) || body.events.length === 0) {
