@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { assertPublicUrl } from '@/lib/network-safety';
 
 const MAX_HTML_BYTES = 2_000_000;
 const MAX_IMAGE_BYTES = 8_000_000;
@@ -203,12 +204,24 @@ function extractQuoteCandidates(html: string, paragraphs: string[], maxQuotes: n
 }
 
 export async function fetchAndExtractArticle(articleUrl: string): Promise<ExtractedArticle> {
+  assertPublicUrl(articleUrl);
+
   const response = await fetch(articleUrl, {
+    redirect: 'manual',
     headers: {
       'User-Agent': 'x-manager/0.1 (+thread-builder)',
       Accept: 'text/html,application/xhtml+xml',
     },
   });
+
+  // Follow redirects manually so we can validate each hop against SSRF.
+  if ([301, 302, 303, 307, 308].includes(response.status)) {
+    const location = response.headers.get('location');
+    if (!location) throw new Error('Redirect with no Location header.');
+    const resolved = new URL(location, articleUrl).href;
+    assertPublicUrl(resolved);
+    return fetchAndExtractArticle(resolved);
+  }
 
   if (!response.ok) {
     throw new Error(`Failed to fetch article (${response.status}).`);
@@ -279,12 +292,40 @@ export async function downloadRemoteImages(imageUrls: string[], maxCount: number
     if (saved.length >= maxCount) break;
 
     try {
+      assertPublicUrl(imageUrl);
+
       const response = await fetch(imageUrl, {
+        redirect: 'manual',
         headers: {
           'User-Agent': 'x-manager/0.1 (+thread-builder)',
           Accept: 'image/*',
         },
       });
+
+      // Skip redirects that point to private addresses instead of following blindly.
+      if ([301, 302, 303, 307, 308].includes(response.status)) {
+        const location = response.headers.get('location');
+        if (!location) continue;
+        const resolved = new URL(location, imageUrl).href;
+        assertPublicUrl(resolved);
+        // Re-fetch from the validated redirect target.
+        const redirected = await fetch(resolved, {
+          redirect: 'manual',
+          headers: { 'User-Agent': 'x-manager/0.1 (+thread-builder)', Accept: 'image/*' },
+        });
+        if (!redirected.ok) continue;
+        const ct = redirected.headers.get('content-type');
+        if (!ct?.toLowerCase().startsWith('image/')) continue;
+        if ((ct || '').toLowerCase().includes('svg')) continue;
+        const buf = await redirected.arrayBuffer();
+        if (buf.byteLength === 0 || buf.byteLength > MAX_IMAGE_BYTES) continue;
+        const ext2 = extensionFromContentType(ct) || extensionFromUrl(resolved);
+        const fname = `${Date.now()}-${crypto.randomUUID().slice(0, 10)}.${ext2}`;
+        await fs.writeFile(path.join(uploadDir, fname), Buffer.from(buf));
+        saved.push(`/uploads/${fname}`);
+        continue;
+      }
+
       if (!response.ok) continue;
 
       const contentType = response.headers.get('content-type');

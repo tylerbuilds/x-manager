@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   let slot: AccountSlot = slotFromQuery ?? 1;
   let oauthTokenSecret: string | null = null;
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const tryPendingCookie = (candidateSlot: AccountSlot): PendingOauthPayload | null => {
     const raw = cookieStore.get(`twitter_oauth_pending_slot_${candidateSlot}`)?.value;

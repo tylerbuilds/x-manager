@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing oauthVerifier.' }, { status: 400 });
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const pendingRaw = cookieStore.get(`twitter_oauth_pending_slot_${slot}`)?.value;
   const pending = pendingRaw ? decodePendingCookie(pendingRaw) : null;
 

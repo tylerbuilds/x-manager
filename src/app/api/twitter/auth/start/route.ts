@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Store the request token + secret per-slot so callback can recover slot even if query params are stripped.
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     cookieStore.set(`twitter_oauth_pending_slot_${slot}`, encodePendingCookie({
       oauthToken: oauth_token,
       oauthTokenSecret: oauth_token_secret,

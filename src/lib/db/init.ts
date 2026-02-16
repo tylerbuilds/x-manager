@@ -635,6 +635,25 @@ export function ensureSchema(sqlite: SqliteDb): void {
       WHERE status = 'scheduled' AND dedupe_key IS NOT NULL;
   `);
 
+  // Clear legacy plaintext tokens from the user table after migration to x_accounts.
+  // The migration above copies tokens into x_accounts; keeping them in `user` is unnecessary
+  // and leaves plaintext credentials in a table that predates the encrypted credential store.
+  try {
+    const hasUserTokenCol = hasColumn(sqlite, 'user', 'twitter_access_token');
+    if (hasUserTokenCol) {
+      const migrated = sqlite.prepare(
+        `SELECT 1 FROM x_accounts WHERE slot = 1 AND twitter_access_token IS NOT NULL LIMIT 1`,
+      ).get();
+      if (migrated) {
+        sqlite.prepare(
+          `UPDATE user SET twitter_access_token = NULL, twitter_access_token_secret = NULL WHERE twitter_access_token IS NOT NULL`,
+        ).run();
+      }
+    }
+  } catch (error) {
+    console.error('Schema init warning: failed to clear legacy user table tokens:', error);
+  }
+
   // Backfill source_url + dedupe_key for older rows so dedupe works consistently.
   try {
     const rows = sqlite
