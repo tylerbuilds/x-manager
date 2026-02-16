@@ -1,6 +1,6 @@
 # X-Manager
 
-> Self-hosted social media management for X (Twitter). Schedule posts, manage multiple accounts, engage with your audience, and automate campaigns -- all from a single dashboard you control.
+> The open-source X command center -- schedule, engage, automate.
 
 **Alpha v0.1.3** | MIT License | Built with Next.js + SQLite
 
@@ -8,22 +8,24 @@
 
 ## What Is This?
 
-X-Manager is a **self-hosted web app** that gives you a unified dashboard to manage your X/Twitter presence. Think of it as a lightweight, privacy-first alternative to Hootsuite or Buffer that runs entirely on your own machine or server.
+X-Manager is a self-hosted X/Twitter management platform that treats **agents and humans as first-class citizens**. Schedule content, bulk-import from CSV, track analytics, manage an engagement inbox, and expose a secure Bridge API so your bots and AI agents can publish autonomously -- all from a single Next.js app backed by SQLite.
 
-You connect your X account(s) via OAuth, and X-Manager handles the rest:
+Zero external dependencies. Full encryption at rest. Runs on a $5 VPS.
 
-- **Schedule posts** with a visual calendar or bulk CSV import
-- **Manage 2 accounts** side-by-side from one interface
+**What you get out of the box:**
+
+- **Schedule posts** -- visual calendar, bulk CSV import, or queue-based publishing
+- **Manage 2 accounts** side-by-side from one dashboard
 - **Auto-publish** on schedule via built-in cron (no extra processes needed)
-- **Track engagement** with an inbox for mentions and DMs
-- **Discover topics** to engage with using keyword search
-- **Monitor analytics** -- impressions, likes, retweets, best posting times
-- **Run campaigns** with an AI-powered agent engine (optional)
-- **Bridge API** for external bots to publish through your accounts
+- **Engagement inbox** -- mentions, DMs, tags, notes, and quick-reply templates
+- **Topic discovery** -- find conversations to engage with, ranked by engagement + recency
+- **Analytics** -- impressions, likes, retweets, best posting times, API cost tracking
+- **AI campaigns** -- define objectives, let agents plan and execute with human approval gates
+- **Bridge API** -- secure endpoint for external bots to publish through your accounts
 
 ### Why Self-Hosted?
 
-Your API keys and OAuth tokens **never leave your machine**. All credentials are encrypted at rest with AES-256-GCM. No third-party SaaS sees your data.
+Your API keys and OAuth tokens **never leave your machine**. All credentials are encrypted at rest with AES-256-GCM. No third-party SaaS sees your data. You own everything.
 
 ---
 
