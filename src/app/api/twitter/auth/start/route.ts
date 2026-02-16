@@ -93,6 +93,14 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error starting twitter auth:', error);
     const message = error instanceof Error ? error.message : 'Failed to start Twitter authentication';
-    return NextResponse.json({ error: message }, { status: 500 });
+
+    let userMessage = 'Something went wrong. Please try again.';
+    if (message.includes('Missing X API key')) {
+      userMessage = "API credentials aren't configured yet. Go to Settings to add them.";
+    } else if (message.includes('Failed to get request token')) {
+      userMessage = 'Could not connect to X. Check your API key and secret in Settings.';
+    }
+
+    return NextResponse.json({ error: message, userMessage }, { status: 500 });
   }
 } 

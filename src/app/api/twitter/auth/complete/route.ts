@@ -75,11 +75,21 @@ export async function POST(req: NextRequest) {
     );
 
     let twitterDisplayName = screen_name;
+    let profileImageUrl: string | null = null;
+    let followersCount: number | null = null;
+    let friendsCount: number | null = null;
+    let bio: string | null = null;
     try {
       const twitterUser = await twitterOAuth.getUserProfile(oauth_token, oauth_token_secret);
       if (twitterUser?.name) {
         twitterDisplayName = twitterUser.name;
       }
+      if (twitterUser?.profile_image_url_https) {
+        profileImageUrl = twitterUser.profile_image_url_https.replace('_normal', '_bigger');
+      }
+      followersCount = twitterUser?.followers_count ?? null;
+      friendsCount = twitterUser?.friends_count ?? null;
+      bio = twitterUser?.description ?? null;
     } catch (profileError) {
       // Some apps can exchange user tokens successfully but fail profile lookup due auth host quirks.
       // Persist the connection anyway so posting can proceed with the obtained OAuth1 user tokens.
@@ -100,6 +110,10 @@ export async function POST(req: NextRequest) {
         twitterDisplayName,
         twitterAccessToken: encryptedTokens.twitterAccessToken,
         twitterAccessTokenSecret: encryptedTokens.twitterAccessTokenSecret,
+        twitterProfileImageUrl: profileImageUrl,
+        twitterFollowersCount: followersCount,
+        twitterFriendsCount: friendsCount,
+        twitterBio: bio,
         updatedAt: new Date(),
       })
       .onConflictDoUpdate({
@@ -110,6 +124,10 @@ export async function POST(req: NextRequest) {
           twitterDisplayName,
           twitterAccessToken: encryptedTokens.twitterAccessToken,
           twitterAccessTokenSecret: encryptedTokens.twitterAccessTokenSecret,
+          twitterProfileImageUrl: profileImageUrl,
+          twitterFollowersCount: followersCount,
+          twitterFriendsCount: friendsCount,
+          twitterBio: bio,
           updatedAt: new Date(),
         },
       });
@@ -121,6 +139,9 @@ export async function POST(req: NextRequest) {
       ok: true,
       slot,
       username: screen_name,
+      displayName: twitterDisplayName,
+      profileImageUrl,
+      followersCount,
     });
   } catch (error) {
     console.error('Error completing twitter auth:', error);

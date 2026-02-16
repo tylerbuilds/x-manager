@@ -120,8 +120,32 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+.account-card-connected {
+  border-left: 3px solid #10b981; /* emerald-500 */
+}
+
+.success-glow {
+  animation: success-glow 3s ease-out both;
+}
+
+@keyframes success-glow {
+  0% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.code-input {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.15em;
+  text-align: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fade-up {
+  .fade-up,
+  .success-glow {
     animation: none;
   }
 }

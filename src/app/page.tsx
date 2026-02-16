@@ -130,9 +130,9 @@ export default function Home() {
       return (
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <h2 className="text-xl font-semibold text-slate-900">Account Connections</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Your X Accounts</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Connect slot 1 and slot 2 to manage two X profiles from one workspace.
+              Connect up to two X profiles to manage them from one place.
             </p>
           </div>
           <TwitterConnector />

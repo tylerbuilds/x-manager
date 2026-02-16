@@ -21,6 +21,10 @@ export async function GET() {
         twitterUserId: account?.twitterUserId ?? null,
         twitterUsername: account?.twitterUsername ?? null,
         twitterDisplayName: account?.twitterDisplayName ?? null,
+        twitterProfileImageUrl: account?.twitterProfileImageUrl ?? null,
+        twitterFollowersCount: account?.twitterFollowersCount ?? null,
+        twitterFriendsCount: account?.twitterFriendsCount ?? null,
+        twitterBio: account?.twitterBio ?? null,
       };
     });
 

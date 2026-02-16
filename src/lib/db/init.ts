@@ -543,6 +543,32 @@ export function ensureSchema(sqlite: SqliteDb): void {
     'ALTER TABLE scheduled_posts ADD COLUMN error_message TEXT',
   );
 
+  // Profile enrichment columns on x_accounts
+  ensureColumn(
+    sqlite,
+    'x_accounts',
+    'twitter_profile_image_url',
+    'ALTER TABLE x_accounts ADD COLUMN twitter_profile_image_url TEXT',
+  );
+  ensureColumn(
+    sqlite,
+    'x_accounts',
+    'twitter_followers_count',
+    'ALTER TABLE x_accounts ADD COLUMN twitter_followers_count INTEGER',
+  );
+  ensureColumn(
+    sqlite,
+    'x_accounts',
+    'twitter_friends_count',
+    'ALTER TABLE x_accounts ADD COLUMN twitter_friends_count INTEGER',
+  );
+  ensureColumn(
+    sqlite,
+    'x_accounts',
+    'twitter_bio',
+    'ALTER TABLE x_accounts ADD COLUMN twitter_bio TEXT',
+  );
+
   execWithRetry(sqlite, `
     UPDATE scheduled_posts
     SET account_slot = 1

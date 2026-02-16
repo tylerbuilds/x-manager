@@ -18,6 +18,10 @@ export const xAccounts = sqliteTable('x_accounts', {
   twitterDisplayName: text('twitter_display_name'),
   twitterAccessToken: text('twitter_access_token'),
   twitterAccessTokenSecret: text('twitter_access_token_secret'),
+  twitterProfileImageUrl: text('twitter_profile_image_url'),
+  twitterFollowersCount: integer('twitter_followers_count'),
+  twitterFriendsCount: integer('twitter_friends_count'),
+  twitterBio: text('twitter_bio'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
