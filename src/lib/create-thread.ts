@@ -203,7 +203,7 @@ function extractQuoteCandidates(html: string, paragraphs: string[], maxQuotes: n
   return deduped;
 }
 
-export async function fetchAndExtractArticle(articleUrl: string): Promise<ExtractedArticle> {
+export async function fetchAndExtractArticle(articleUrl: string, _maxRedirects = 5): Promise<ExtractedArticle> {
   assertPublicUrl(articleUrl);
 
   const response = await fetch(articleUrl, {
@@ -216,11 +216,12 @@ export async function fetchAndExtractArticle(articleUrl: string): Promise<Extrac
 
   // Follow redirects manually so we can validate each hop against SSRF.
   if ([301, 302, 303, 307, 308].includes(response.status)) {
+    if (_maxRedirects <= 0) throw new Error('Too many redirects.');
     const location = response.headers.get('location');
     if (!location) throw new Error('Redirect with no Location header.');
     const resolved = new URL(location, articleUrl).href;
     assertPublicUrl(resolved);
-    return fetchAndExtractArticle(resolved);
+    return fetchAndExtractArticle(resolved, _maxRedirects - 1);
   }
 
   if (!response.ok) {

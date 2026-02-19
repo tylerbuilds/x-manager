@@ -1,36 +1,53 @@
 import { runBootChecks } from './lib/boot-checks';
 
+const STARTUP_RETRIES = 3;
+const RETRY_DELAY_MS = 5_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function startWithRetry(name: string, fn: () => void | Promise<void>): Promise<void> {
+  for (let attempt = 1; attempt <= STARTUP_RETRIES; attempt += 1) {
+    try {
+      await fn();
+      return;
+    } catch (error) {
+      console.error(`[instrumentation] ${name} startup failed (attempt ${attempt}/${STARTUP_RETRIES}):`, error);
+      if (attempt < STARTUP_RETRIES) {
+        await sleep(RETRY_DELAY_MS);
+      }
+    }
+  }
+  console.error(`[instrumentation] ${name} failed after ${STARTUP_RETRIES} attempts. NOT RUNNING.`);
+}
+
 export function registerNodeInstrumentation(): void {
   runBootChecks();
 
-  // Avoid failing the entire Next.js instrumentation hook due to transient DB issues.
-  // Scheduler startup is best-effort and will log (not crash) on failure.
-  void (async () => {
-    try {
-      const { startInAppScheduler } = await import('./lib/scheduler-runner');
-      startInAppScheduler();
-    } catch (error) {
-      console.error('[instrumentation] Scheduler startup failed:', error);
-    }
-  })();
+  process.on('uncaughtException', (error) => {
+    console.error('[FATAL] Uncaught exception:', error);
+    process.exit(1);
+  });
 
-  void (async () => {
-    try {
-      const { startActionSchedulerLoop } = await import('./lib/action-scheduler');
-      startActionSchedulerLoop({ intervalSeconds: 30 });
-      console.log('[instrumentation] Action scheduler started (30s interval).');
-    } catch (error) {
-      console.error('[instrumentation] Action scheduler startup failed:', error);
-    }
-  })();
+  process.on('unhandledRejection', (reason) => {
+    console.error('[FATAL] Unhandled rejection:', reason);
+  });
 
-  void (async () => {
-    try {
-      const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
-      startMetricsCollectorLoop(900); // 15 minutes
-      console.log('[instrumentation] Metrics collector started (15m interval).');
-    } catch (error) {
-      console.error('[instrumentation] Metrics collector startup failed:', error);
-    }
-  })();
+  void startWithRetry('Post scheduler', async () => {
+    const { startInAppScheduler } = await import('./lib/scheduler-runner');
+    startInAppScheduler();
+  });
+
+  void startWithRetry('Action scheduler', async () => {
+    const { startActionSchedulerLoop } = await import('./lib/action-scheduler');
+    startActionSchedulerLoop({ intervalSeconds: 30 });
+    console.log('[instrumentation] Action scheduler started (30s interval).');
+  });
+
+  void startWithRetry('Metrics collector', async () => {
+    const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
+    startMetricsCollectorLoop(900);
+    console.log('[instrumentation] Metrics collector started (15m interval).');
+  });
 }

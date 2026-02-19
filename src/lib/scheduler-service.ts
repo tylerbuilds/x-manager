@@ -8,6 +8,7 @@ import { postTweet, uploadMedia } from './twitter-api-client';
 import { getResolvedXConfig, type ResolvedXConfig } from './x-config';
 import { normalizeAccountSlot } from './account-slots';
 import { decryptAccountTokens } from './x-account-crypto';
+import { markSchedulerStarted, markCycleSuccess, markCycleError } from './scheduler-health';
 
 type LogFn = (...args: unknown[]) => void;
 
@@ -170,14 +171,33 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
 
     const duePosts = await getDuePosts();
     if (duePosts.length === 0) {
+      markCycleSuccess();
       return { skipped: false, processed: 0, posted: 0, failed: 0 };
     }
 
     let posted = 0;
     let failed = 0;
+    let leaseStolen = false;
     const threadLatest = new Map<string, { index: number; twitterPostId: string }>();
 
     for (const post of duePosts) {
+      // Extend lease periodically so long cycles don't lose the lock.
+      const elapsed = Math.floor(Date.now() / 1000) - nowEpoch;
+      if (elapsed > leaseSeconds * 0.5) {
+        const newLeaseUntil = Math.floor(Date.now() / 1000) + leaseSeconds;
+        const extended = sqlite
+          .prepare(
+            `UPDATE scheduler_locks SET lease_until = ?, updated_at = unixepoch()
+             WHERE lock_key = ? AND owner_id = ?`,
+          )
+          .run(newLeaseUntil, schedulerLockKey, schedulerOwnerId);
+        if (extended.changes === 0) {
+          logger.error('Scheduler lease stolen by another instance. Aborting cycle.');
+          leaseStolen = true;
+          break;
+        }
+      }
+
       try {
         const accountSlot = normalizeAccountSlot(post.accountSlot, 1);
         const account = accountBySlot.get(accountSlot);
@@ -276,12 +296,16 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
       }
     }
 
+    markCycleSuccess();
     return {
       skipped: false,
       processed: duePosts.length,
       posted,
       failed,
     };
+  } catch (error) {
+    markCycleError();
+    throw error;
   } finally {
     sqlite
       .prepare(
@@ -315,20 +339,21 @@ export function startSchedulerLoop(options: StartSchedulerLoopOptions = {}): () 
       if (result.processed > 0) {
         logger.info(`Initial cycle processed ${result.processed} posts.`);
       }
+    }).catch((error) => {
+      logger.error('Initial scheduler cycle failed:', error);
+      markCycleError();
     });
   }
 
   const timer = setInterval(() => {
     void runSchedulerCycle(logger).catch((error) => {
       logger.error('Scheduler cycle error:', error);
+      markCycleError();
     });
   }, intervalSeconds * 1000);
 
-  if (typeof timer.unref === 'function') {
-    timer.unref();
-  }
-
   runningLoops.set(key, timer);
+  markSchedulerStarted();
   logger.info(`Scheduler loop "${key}" started (${intervalSeconds}s interval).`);
 
   return () => {

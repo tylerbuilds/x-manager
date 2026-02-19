@@ -19,7 +19,13 @@ default_node_bin() {
     return 0
   fi
 
-  # Prefer a stable Node LTS when available (better-sqlite3 native modules are sensitive to ABI changes).
+  # Pin Node 22 LTS — better-sqlite3 native module is compiled against it.
+  # Falling through to an unversioned 'node' causes ABI mismatches when brew upgrades.
+  if [[ -x "/home/linuxbrew/.linuxbrew/opt/node@22/bin/node" ]]; then
+    echo "/home/linuxbrew/.linuxbrew/opt/node@22/bin/node"
+    return 0
+  fi
+
   if [[ -x "/usr/local/bin/node" ]]; then
     echo "/usr/local/bin/node"
     return 0
@@ -77,6 +83,15 @@ start() {
   if [[ ! -f "$NEXT_BIN" ]]; then
     echo "missing $NEXT_BIN (run: npm install)"
     return 1
+  fi
+
+  # Validate native module ABI before starting — dev-3999.sh invokes node
+  # directly (bypassing npm lifecycle hooks), so this is the only check.
+  if [[ -x "$ROOT_DIR/scripts/check-node-abi.sh" ]]; then
+    PATH="$(dirname "$node_bin"):$PATH" "$ROOT_DIR/scripts/check-node-abi.sh" || {
+      echo "ABI check failed — cannot start"
+      return 1
+    }
   fi
 
   # Prefer tmux when available (more reliable than backgrounding in some environments).

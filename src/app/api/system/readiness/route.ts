@@ -6,6 +6,7 @@ import { getResolvedXConfig } from '@/lib/x-config';
 import { ACCOUNT_SLOTS } from '@/lib/account-slots';
 import { canEncryptSecrets } from '@/lib/crypto-store';
 import { getAdminToken, isAuthRequired } from '@/lib/api-auth';
+import { getSchedulerHealth } from '@/lib/scheduler-health';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,9 +47,15 @@ export async function GET() {
       slotStatus,
     };
 
+    const health = getSchedulerHealth();
     const schedulerChecks = {
       inAppEnabled: process.env.DISABLE_IN_APP_SCHEDULER !== 'true',
       intervalSeconds: Math.max(10, Number(process.env.SCHEDULER_INTERVAL_SECONDS || 60)),
+      running: health.startedAt !== null,
+      startedAt: health.startedAt,
+      lastCycleAt: health.lastCycleAt,
+      lastCycleResult: health.lastCycleResult,
+      consecutiveErrors: health.consecutiveErrors,
     };
 
     const securityChecks = {
@@ -70,6 +77,7 @@ export async function GET() {
       envChecks.xBearerToken &&
       authChecks.connectedEnough &&
       schedulerChecks.inAppEnabled &&
+      schedulerChecks.running &&
       securityReady &&
       securityChecks.hasEncryptionKey;
 

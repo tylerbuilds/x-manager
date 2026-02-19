@@ -45,6 +45,34 @@ function deriveKeyFromConfig(): Buffer | null {
     // Key file doesn't exist yet -- generate one.
   }
 
+  // Guard: refuse to generate a new key if encrypted values already exist in the DB.
+  // Silently generating a new key would make existing secrets permanently unreadable.
+  try {
+    const dbRaw = (process.env.X_MANAGER_DB_PATH || '').trim() || 'var/x-manager.sqlite.db';
+    const dbResolved = path.isAbsolute(dbRaw) ? dbRaw : path.join(process.cwd(), dbRaw);
+    if (fs.existsSync(dbResolved)) {
+      const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3').default;
+      const checkDb = new BetterSqlite3(dbResolved, { readonly: true, timeout: 2000 });
+      try {
+        const row = checkDb.prepare(
+          "SELECT 1 FROM app_settings WHERE setting_value LIKE 'enc:v1:%' LIMIT 1",
+        ).get();
+        if (row) {
+          throw new Error(
+            '[crypto-store] FATAL: Encrypted secrets exist in the database but the dev encryption key ' +
+            'file is missing or invalid (var/.dev-encryption-key). Generating a new key would make ' +
+            'existing secrets unreadable. Restore the key file or re-encrypt secrets with the current key.',
+          );
+        }
+      } finally {
+        checkDb.close();
+      }
+    }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('FATAL')) throw err;
+    // DB doesn't exist yet or can't be read -- safe to generate a new key.
+  }
+
   try {
     fs.mkdirSync(path.dirname(keyPath), { recursive: true });
     const randomKey = crypto.randomBytes(32).toString('hex');

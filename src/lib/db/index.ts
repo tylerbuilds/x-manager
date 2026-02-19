@@ -14,6 +14,13 @@ function resolveDbPath(): string {
 
 export const dbPath = resolveDbPath();
 export const sqlite = new Database(dbPath, { timeout: 5000 });
+
+// Apply critical PRAGMAs unconditionally — including during production builds —
+// so every connection uses WAL mode and a sane busy timeout.
+sqlite.pragma('journal_mode = WAL');
+sqlite.pragma('busy_timeout = 5000');
+sqlite.pragma('synchronous = NORMAL');
+
 const isNextProductionBuild = process.env.NEXT_PHASE === 'phase-production-build';
 if (!isNextProductionBuild) {
   ensureSchema(sqlite);

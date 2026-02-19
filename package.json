@@ -24,7 +24,10 @@
     "db:push": "drizzle-kit push:sqlite",
     "db:migrate": "drizzle-kit migrate:sqlite",
     "cron:run": "ts-node --project tsconfig.cron.json scripts/scheduler.ts",
-    "import:csv": "ts-node --project tsconfig.cron.json scripts/import-csv.ts"
+    "import:csv": "ts-node --project tsconfig.cron.json scripts/import-csv.ts",
+    "prebuild": "bash scripts/check-node-abi.sh",
+    "predev": "bash scripts/check-node-abi.sh",
+    "prestart": "bash scripts/check-node-abi.sh"
   },
   "dependencies": {
     "@giphy/js-fetch-api": "^5.0.0",
