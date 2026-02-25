@@ -9,6 +9,8 @@ import { getResolvedXConfig } from '@/lib/x-config';
 import { postTweet, uploadMedia } from '@/lib/twitter-api-client';
 import { decryptAccountTokens } from '@/lib/x-account-crypto';
 import { apiError } from '@/lib/api-error';
+import { twitterWeightedLength } from '@/lib/twitter-text';
+import { validateTweetUrls } from '@/lib/tweet-url-validator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -717,13 +719,23 @@ export async function POST(req: Request) {
           continue;
         }
 
-        if (text.length > MAX_TWEET_CHARS) {
+        if (twitterWeightedLength(text) > MAX_TWEET_CHARS) {
           results.push({
             index: i,
             ok: false,
-            error: `Tweet text exceeds ${MAX_TWEET_CHARS} characters.`,
+            error: `Tweet text exceeds ${MAX_TWEET_CHARS} characters (Twitter-weighted).`,
             code: 'VALIDATION_ERROR',
           });
+          failed++;
+          continue;
+        }
+
+        /* -- URL liveness check -- */
+        try {
+          await validateTweetUrls(text);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Tweet contains broken URLs.';
+          results.push({ index: i, ok: false, error: message, code: 'VALIDATION_ERROR' });
           failed++;
           continue;
         }

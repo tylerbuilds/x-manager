@@ -1,4 +1,5 @@
 import { isAccountSlot, normalizeAccountSlot, type AccountSlot } from './account-slots';
+import { twitterWeightedLength } from './twitter-text';
 
 export interface CsvImportIssue {
   lineNumber: number;
@@ -244,11 +245,12 @@ export function prepareCsvImport(csvText: string, options: PrepareCsvImportOptio
       continue;
     }
 
-    if (text.length > 280) {
+    const weightedLen = twitterWeightedLength(text);
+    if (weightedLen > 280) {
       warnings.push({
         lineNumber: row.lineNumber,
         field: 'text',
-        message: `Tweet is ${text.length} characters. Posting may fail if your account is limited to 280.`,
+        message: `Tweet is ${weightedLen} Twitter-weighted characters. Posting may fail if your account is limited to 280.`,
       });
     }
 

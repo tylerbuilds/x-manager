@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import { assertPublicUrl } from '@/lib/network-safety';
+import { truncateForTwitter } from '@/lib/twitter-text';
 
 const MAX_HTML_BYTES = 2_000_000;
 const MAX_IMAGE_BYTES = 8_000_000;
@@ -357,7 +358,7 @@ export function buildThreadDraft(
   const sourceUrl = article.canonicalUrl || article.url;
   const tweets: DraftTweet[] = [];
 
-  const firstTweet = truncate(`${article.title}\n\n${sourceUrl}`, 280);
+  const firstTweet = truncateForTwitter(`${article.title}\n\n${sourceUrl}`, 280);
   tweets.push({ text: firstTweet });
 
   const maxQuoteTweets = Math.max(0, maxTweets - 2);
@@ -374,7 +375,7 @@ export function buildThreadDraft(
   }
 
   if (tweets.length < maxTweets) {
-    const cta = truncate(`Read the full article: ${sourceUrl}`, 280);
+    const cta = truncateForTwitter(`Read the full article: ${sourceUrl}`, 280);
     tweets.push({ text: cta });
   }
 

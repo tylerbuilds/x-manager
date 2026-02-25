@@ -8,6 +8,8 @@ import { xAccounts } from '@/lib/db/schema';
 import { getResolvedXConfig } from '@/lib/x-config';
 import { postTweet, uploadMedia } from '@/lib/twitter-api-client';
 import { decryptAccountTokens } from '@/lib/x-account-crypto';
+import { twitterWeightedLength } from '@/lib/twitter-text';
+import { validateTweetUrls } from '@/lib/tweet-url-validator';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -615,8 +617,15 @@ export async function POST(req: Request) {
         400,
       );
     }
-    if (text.length > MAX_TWEET_CHARS) {
-      return noStoreJson({ error: `Tweet text exceeds ${MAX_TWEET_CHARS} characters.` }, 400);
+    if (twitterWeightedLength(text) > MAX_TWEET_CHARS) {
+      return noStoreJson({ error: `Tweet text exceeds ${MAX_TWEET_CHARS} characters (Twitter-weighted).` }, 400);
+    }
+
+    try {
+      await validateTweetUrls(text);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Tweet contains broken URLs.';
+      return noStoreJson({ error: message }, 422);
     }
 
     let accountSlot = 1;

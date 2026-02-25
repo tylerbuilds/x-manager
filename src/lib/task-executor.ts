@@ -8,6 +8,7 @@ import {
 import { requireConnectedAccount, recordEngagementAction } from './engagement-ops';
 import { postTweet, sendDirectMessage, likeTweet, repostTweet } from './twitter-api-client';
 import { checkPolicy } from './policy';
+import { validateTweetUrls } from './tweet-url-validator';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -266,6 +267,8 @@ async function executePostTask(
   const mediaIds = Array.isArray(details.mediaIds) ? (details.mediaIds as string[]) : [];
   const communityId = (details.communityId as string) ?? undefined;
   const replyToTweetId = (details.replyToTweetId as string) ?? undefined;
+
+  await validateTweetUrls(content);
 
   const result = await postTweet(
     content,
