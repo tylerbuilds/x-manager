@@ -2,7 +2,7 @@
 
 > The open-source X command center -- schedule, engage, automate.
 
-**Alpha v0.1.3** | MIT License | Built with Next.js + SQLite
+**v0.2.0** | MIT License | Built with Next.js 15 + SQLite
 
 ---
 
@@ -19,9 +19,18 @@ Zero external dependencies. Full encryption at rest. Runs on a $5 VPS.
 - **Auto-publish** on schedule via built-in cron (no extra processes needed)
 - **Engagement inbox** -- mentions, DMs, tags, notes, and quick-reply templates
 - **Topic discovery** -- find conversations to engage with, ranked by engagement + recency
-- **Analytics** -- impressions, likes, retweets, best posting times, API cost tracking
+- **Analytics** -- impressions, likes, retweets, best posting times, follower growth, CSV/JSON export
 - **AI campaigns** -- define objectives, let agents plan and execute with human approval gates
 - **Bridge API** -- secure endpoint for external bots to publish through your accounts
+- **Automation engine** -- rule-based triggers (event, schedule, keyword) with auto-actions
+- **RSS feeds** -- monitor feeds and auto-schedule posts from new entries
+- **Media library** -- upload, tag, and reuse images across posts
+- **Recurring posts** -- schedule evergreen content on daily/weekly/monthly/cron cycles
+- **URL shortener** -- built-in link shortener with click tracking and UTM support
+- **Draft manager** -- save, edit, and schedule drafts from a dedicated UI
+- **Global search** -- search across posts, inbox, campaigns, drafts, and templates
+- **Post approvals** -- request and approve/reject posts before they go live
+- **Event system** -- real-time SSE + webhooks for agent-driven workflows
 
 ### Why Self-Hosted?
 
@@ -166,6 +175,38 @@ Define campaign objectives and let an AI agent plan and execute tasks:
 - Durable run history with step-by-step logs
 - Webhook notifications for external integrations
 
+### Automation Engine
+
+Build event-driven workflows without code:
+- **Trigger types**: event (fires on system events), schedule (cron), keyword (fires on inbox keywords)
+- **Actions**: like, reply, repost, schedule post, send DM, tag, webhook, dismiss
+- **Condition filters**: equals, contains, regex, gt, lt on any event field
+
+### RSS Feed Monitor
+
+Auto-post from RSS feeds with configurable templates:
+- Template variables: `{title}`, `{url}`, `{summary}`
+- Configurable check intervals and auto-scheduling
+
+### Media Library & Recurring Posts
+
+- Upload and tag media for reuse across posts
+- Schedule recurring/evergreen content: daily, weekly, biweekly, monthly, or custom cron
+- Content pool rotation for varied posting
+
+### URL Shortener
+
+Built-in link shortener with analytics:
+- Click tracking with daily breakdown
+- UTM parameter support (source, medium, campaign)
+- Privacy-preserving IP hashing
+
+### Draft Manager
+
+- Save, edit, and schedule drafts from a dedicated UI
+- Convert drafts to scheduled posts with one click
+- Tweet preview with syntax-highlighted @mentions, #hashtags, and URLs
+
 ### Bridge API
 
 Let external bots publish through X-Manager with full security:
@@ -281,18 +322,35 @@ X-Manager exposes a REST API (all routes under `/api/`). Key endpoints:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/system/readiness` | Health check and system status |
+| `GET` | `/api/system/agent` | Full agent manifest (all endpoints + examples) |
 | `POST` | `/api/system/auth/login` | Login with admin token |
 | `POST` | `/api/twitter/auth/start` | Start OAuth flow |
-| `GET/POST` | `/api/scheduler/posts` | List/create scheduled posts |
+| `GET/POST` | `/api/scheduler/posts` | List/create scheduled posts (supports `?tag=` filter) |
+| `POST` | `/api/scheduler/thread` | Create multi-post threads |
 | `POST` | `/api/scheduler/import-csv` | Bulk import posts from CSV |
+| `GET/POST` | `/api/scheduler/recurring` | Manage recurring/evergreen schedules |
+| `POST` | `/api/scheduler/posts/:id/request-approval` | Request approval for a post |
+| `PATCH` | `/api/scheduler/posts/:id/approve` | Approve or reject a post |
+| `GET/POST` | `/api/drafts` | Manage draft posts |
 | `GET` | `/api/discovery/topics?keywords=ai,agents` | Search for topics |
-| `GET` | `/api/usage/tweets?days=7` | X API usage stats |
-| `GET` | `/api/analytics/overview` | Engagement analytics |
+| `GET/POST` | `/api/discovery/saved` | Saved keyword searches |
 | `GET` | `/api/engagement/inbox` | Inbox items |
+| `POST` | `/api/engagement/actions/bulk` | Bulk engagement actions (up to 25) |
+| `GET/POST` | `/api/automation/rules` | Manage automation rules |
+| `GET/POST` | `/api/feeds` | RSS feed monitor |
+| `GET/POST` | `/api/media` | Media library |
+| `GET/POST` | `/api/urls` | URL shortener with click tracking |
+| `GET` | `/api/analytics/overview` | Engagement analytics |
+| `GET` | `/api/analytics/followers` | Follower growth timeseries |
+| `GET` | `/api/analytics/export?format=csv` | Export metrics as CSV/JSON |
+| `GET` | `/api/search?q=keyword` | Global search across all entities |
+| `GET` | `/api/events/stream` | Real-time SSE event stream |
+| `GET` | `/api/usage/tweets?days=7` | X API usage stats |
 | `POST` | `/api/bridge/openclaw/post` | Bridge API for external bots |
 | `GET/POST` | `/api/agent/campaigns` | Campaign management |
+| `GET/POST` | `/api/agent/webhooks` | Webhook management |
 
-All endpoints require authentication when `X_MANAGER_REQUIRE_AUTH=true` (default).
+All endpoints require authentication when `X_MANAGER_REQUIRE_AUTH=true` (default). The full agent manifest at `/api/system/agent` documents all 50+ endpoints with curl examples.
 
 ---
 
@@ -314,7 +372,7 @@ npm run lint
 
 ### Tech Stack
 
-- **Next.js 14** (React 18) -- full-stack web framework
+- **Next.js 15** (React 18) -- full-stack web framework
 - **TypeScript** -- end-to-end type safety
 - **SQLite** (better-sqlite3) -- zero-config embedded database
 - **Drizzle ORM** -- type-safe database access
