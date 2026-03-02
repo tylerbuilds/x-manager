@@ -481,6 +481,37 @@ export const savedSearchMatches = sqliteTable('saved_search_matches', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Sprint 4: Short URLs ---
+export const shortUrls = sqliteTable('short_urls', {
+  id: integer('id').primaryKey(),
+  shortCode: text('short_code').notNull().unique(),
+  targetUrl: text('target_url').notNull(),
+  utmSource: text('utm_source'),
+  utmMedium: text('utm_medium'),
+  utmCampaign: text('utm_campaign'),
+  clickCount: integer('click_count').notNull().default(0),
+  postId: integer('post_id'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const urlClicks = sqliteTable('url_clicks', {
+  id: integer('id').primaryKey(),
+  shortUrlId: integer('short_url_id').notNull(),
+  referer: text('referer'),
+  userAgent: text('user_agent'),
+  ipHash: text('ip_hash'),
+  clickedAt: integer('clicked_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 4: Follower Snapshots ---
+export const followerSnapshots = sqliteTable('follower_snapshots', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull(),
+  followersCount: integer('followers_count').notNull(),
+  followingCount: integer('following_count').notNull(),
+  snapshotAt: integer('snapshot_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const agentWebhooks = sqliteTable('agent_webhooks', {
   id: integer('id').primaryKey(),
   url: text('url').notNull(),

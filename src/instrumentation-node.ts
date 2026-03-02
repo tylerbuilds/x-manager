@@ -72,6 +72,32 @@ export function registerNodeInstrumentation(): void {
     console.log(`[instrumentation] Recurring processor started (${intervalMs / 1000}s interval).`);
   });
 
+  void startWithRetry('Follower tracker', async () => {
+    const { takeFollowerSnapshots, isFollowerTrackerStarted, markFollowerTrackerStarted } = await import('./lib/follower-tracker');
+    if (isFollowerTrackerStarted()) {
+      console.log('[instrumentation] Follower tracker already running, skipping.');
+      return;
+    }
+    markFollowerTrackerStarted();
+    // Snapshot once daily (86400s), check every hour
+    const intervalMs = 3600 * 1000;
+    setInterval(() => {
+      try {
+        const created = takeFollowerSnapshots();
+        if (created > 0) {
+          console.log(`[followers] Recorded ${created} follower snapshot(s).`);
+        }
+      } catch (error) {
+        console.error('[followers] Error in follower tracker cycle:', error);
+      }
+    }, intervalMs);
+    // Take initial snapshot on startup
+    try {
+      takeFollowerSnapshots();
+    } catch { /* best-effort */ }
+    console.log('[instrumentation] Follower tracker started (1h interval).');
+  });
+
   if (process.env.DISABLE_METRICS_COLLECTOR === 'true') {
     console.log('[instrumentation] Metrics collector disabled via DISABLE_METRICS_COLLECTOR.');
   } else {

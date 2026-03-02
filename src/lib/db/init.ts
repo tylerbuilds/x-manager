@@ -45,6 +45,7 @@ const KNOWN_TABLES = new Set([
   'media_library', 'recurring_schedules', 'content_pool',
   'automation_rules', 'automation_rule_runs', 'feeds', 'feed_entries',
   'saved_searches', 'saved_search_matches',
+  'short_urls', 'url_clicks', 'follower_snapshots',
 ]);
 
 function hasColumn(sqlite: SqliteDb, tableName: string, columnName: string): boolean {
@@ -662,6 +663,45 @@ export function ensureSchema(sqlite: SqliteDb): void {
       ON saved_search_matches(search_id, match_id);
     CREATE INDEX IF NOT EXISTS idx_saved_search_matches_search_created
       ON saved_search_matches(search_id, created_at);
+
+    -- Sprint 4: Short URLs
+    CREATE TABLE IF NOT EXISTS short_urls (
+      id INTEGER PRIMARY KEY,
+      short_code TEXT NOT NULL UNIQUE,
+      target_url TEXT NOT NULL,
+      utm_source TEXT,
+      utm_medium TEXT,
+      utm_campaign TEXT,
+      click_count INTEGER NOT NULL DEFAULT 0,
+      post_id INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_short_urls_code
+      ON short_urls(short_code);
+    CREATE INDEX IF NOT EXISTS idx_short_urls_post
+      ON short_urls(post_id);
+
+    CREATE TABLE IF NOT EXISTS url_clicks (
+      id INTEGER PRIMARY KEY,
+      short_url_id INTEGER NOT NULL,
+      referer TEXT,
+      user_agent TEXT,
+      ip_hash TEXT,
+      clicked_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_url_clicks_short_url
+      ON url_clicks(short_url_id, clicked_at);
+
+    -- Sprint 4: Follower Snapshots
+    CREATE TABLE IF NOT EXISTS follower_snapshots (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL,
+      followers_count INTEGER NOT NULL,
+      following_count INTEGER NOT NULL,
+      snapshot_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_follower_snapshots_slot_time
+      ON follower_snapshots(account_slot, snapshot_at);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks
