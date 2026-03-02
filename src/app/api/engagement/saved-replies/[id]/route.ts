@@ -8,10 +8,11 @@ export const dynamic = 'force-dynamic';
 
 export async function PUT(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = Number(params.id);
+    const { id: rawId } = await params;
+    const id = Number(rawId);
     if (!Number.isFinite(id)) {
       return NextResponse.json({ error: 'Invalid ID.' }, { status: 400 });
     }
@@ -41,10 +42,11 @@ export async function PUT(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const id = Number(params.id);
+    const { id: rawId } = await params;
+    const id = Number(rawId);
     if (!Number.isFinite(id)) {
       return NextResponse.json({ error: 'Invalid ID.' }, { status: 400 });
     }

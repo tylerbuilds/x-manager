@@ -56,8 +56,9 @@ function parseCampaignId(raw: string): number | null {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const campaignId = parseCampaignId(params.id);
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const campaignId = parseCampaignId(id);
   if (!campaignId) {
     return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
   }
@@ -71,9 +72,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ items: rows });
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const campaignId = parseCampaignId(params.id);
+    const { id } = await params;
+    const campaignId = parseCampaignId(id);
     if (!campaignId) {
       return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
     }

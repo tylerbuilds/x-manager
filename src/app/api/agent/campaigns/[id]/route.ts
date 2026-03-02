@@ -42,8 +42,9 @@ function parseId(raw: string): number | null {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const id = parseId(params.id);
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;
+  const id = parseId(rawId);
   if (!id) {
     return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
   }
@@ -57,9 +58,10 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ campaign: row });
 }
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseId(params.id);
+    const { id: rawId } = await params;
+    const id = parseId(rawId);
     if (!id) {
       return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
     }
@@ -121,8 +123,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const id = parseId(params.id);
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id: rawId } = await params;
+  const id = parseId(rawId);
   if (!id) {
     return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
   }

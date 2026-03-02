@@ -45,9 +45,14 @@ export function registerNodeInstrumentation(): void {
     console.log('[instrumentation] Action scheduler started (30s interval).');
   });
 
-  void startWithRetry('Metrics collector', async () => {
-    const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
-    startMetricsCollectorLoop(900);
-    console.log('[instrumentation] Metrics collector started (15m interval).');
-  });
+  if (process.env.DISABLE_METRICS_COLLECTOR === 'true') {
+    console.log('[instrumentation] Metrics collector disabled via DISABLE_METRICS_COLLECTOR.');
+  } else {
+    const metricsInterval = Math.max(60, Number(process.env.METRICS_INTERVAL_SECONDS) || 3600);
+    void startWithRetry('Metrics collector', async () => {
+      const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
+      startMetricsCollectorLoop(metricsInterval);
+      console.log(`[instrumentation] Metrics collector started (${metricsInterval}s interval).`);
+    });
+  }
 }

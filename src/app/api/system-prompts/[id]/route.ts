@@ -5,11 +5,12 @@ import { eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id: rawId } = await params;
     const body = await req.json();
     const { name, prompt, isDefault = false } = body;
-    const id = parseInt(params.id);
+    const id = parseInt(rawId);
 
     if (!name || !prompt) {
       return NextResponse.json({ error: 'Name and prompt are required' }, { status: 400 });
@@ -41,9 +42,10 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const id = parseInt(params.id);
+    const { id: rawId } = await params;
+    const id = parseInt(rawId);
 
     const deletedPrompt = await db.delete(systemPrompts)
       .where(eq(systemPrompts.id, id))

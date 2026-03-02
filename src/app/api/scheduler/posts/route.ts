@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs/promises';
 import { NextResponse } from 'next/server';
 import path from 'path';
-import { and, desc, eq, gte, lte, like, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, like, type SQL } from 'drizzle-orm';
 
 import { db, sqlite } from '@/lib/db';
 import { scheduledPosts } from '@/lib/db/schema';
@@ -16,6 +16,7 @@ import {
   toPublicPathFromMediaUrl,
 } from '@/lib/uploads';
 import { withIdempotency } from '@/lib/idempotency';
+import { suggestOptimalTime } from '@/lib/optimal-time';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -81,11 +82,24 @@ export async function GET(req: Request) {
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const posts = await db
-      .select()
-      .from(scheduledPosts)
-      .where(where)
-      .orderBy(desc(scheduledPosts.createdAt));
+    const limitParam = url.searchParams.get('limit');
+    const limit = Math.max(1, Math.min(10000, Number(limitParam) || 200));
+    const offsetParam = url.searchParams.get('offset');
+    const offset = Math.max(0, Number(offsetParam) || 0);
+
+    const [posts, [{ total }]] = await Promise.all([
+      db
+        .select()
+        .from(scheduledPosts)
+        .where(where)
+        .orderBy(desc(scheduledPosts.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({ total: count() })
+        .from(scheduledPosts)
+        .where(where),
+    ]);
 
     // Phase 7: Optionally join latest metrics for posted items
     if (includeMetrics) {
@@ -117,7 +131,7 @@ export async function GET(req: Request) {
 
           const metricsMap = new Map(metricsRows.map((m) => [m.twitter_post_id, m]));
 
-          return NextResponse.json(posts.map((post) => {
+          const postsWithMetrics = posts.map((post) => {
             const metrics = post.twitterPostId ? metricsMap.get(post.twitterPostId) : null;
             return {
               ...post,
@@ -130,14 +144,27 @@ export async function GET(req: Request) {
                 bookmarks: metrics.bookmarks,
               } : null,
             };
-          }));
+          });
+          return NextResponse.json({
+            posts: postsWithMetrics,
+            total,
+            offset,
+            limit,
+            hasMore: offset + posts.length < total,
+          });
         }
       } catch {
         // Fall through to return without metrics
       }
     }
 
-    return NextResponse.json(posts);
+    return NextResponse.json({
+      posts,
+      total,
+      offset,
+      limit,
+      hasMore: offset + posts.length < total,
+    });
   } catch (error) {
     console.error('Error fetching scheduled posts:', error);
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
@@ -151,6 +178,7 @@ export async function POST(req: Request) {
 
     const text = String(formData.get('text') || '');
     const scheduledTime = formData.get('scheduled_time') as string | null;
+    const autoOptimalTime = formData.get('auto_optimal_time') === 'true';
     const communityId = (formData.get('community_id') as string | null)?.trim() || null;
     const replyToTweetId = (formData.get('reply_to_tweet_id') as string | null)?.trim() || null;
     const threadIdRaw = (formData.get('thread_id') as string | null)?.trim() || null;
@@ -173,13 +201,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing text.' }, { status: 400 });
     }
 
-    if (!scheduledTime) {
-      return NextResponse.json({ error: 'Missing scheduled_time.' }, { status: 400 });
-    }
-
-    const scheduledAt = new Date(scheduledTime);
-    if (Number.isNaN(scheduledAt.getTime())) {
-      return NextResponse.json({ error: 'Invalid scheduled_time. Provide an ISO date string.' }, { status: 400 });
+    let scheduledAt: Date;
+    if (autoOptimalTime) {
+      scheduledAt = suggestOptimalTime(accountSlot);
+    } else if (!scheduledTime) {
+      return NextResponse.json({ error: 'Missing scheduled_time. Provide an ISO date string or set auto_optimal_time=true.' }, { status: 400 });
+    } else {
+      scheduledAt = new Date(scheduledTime);
+      if (Number.isNaN(scheduledAt.getTime())) {
+        return NextResponse.json({ error: 'Invalid scheduled_time. Provide an ISO date string.' }, { status: 400 });
+      }
     }
 
     let threadId: string | null = threadIdRaw;

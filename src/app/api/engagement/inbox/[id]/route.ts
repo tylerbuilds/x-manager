@@ -26,9 +26,10 @@ function asInboxStatus(value: unknown): InboxStatus | null {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const inboxId = Number.parseInt(params.id, 10);
+    const { id } = await params;
+    const inboxId = Number.parseInt(id, 10);
     if (!Number.isFinite(inboxId) || inboxId <= 0) {
       return NextResponse.json({ error: 'Invalid inbox id.' }, { status: 400 });
     }

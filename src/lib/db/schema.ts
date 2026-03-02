@@ -326,6 +326,31 @@ export const contentQueue = sqliteTable('content_queue', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Sprint 1: Events ---
+export const events = sqliteTable('events', {
+  id: integer('id').primaryKey(),
+  eventType: text('event_type').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: text('entity_id').notNull(),
+  accountSlot: integer('account_slot'),
+  payload: text('payload'), // JSON
+  readAt: integer('read_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 1: Webhook Deliveries ---
+export const webhookDeliveries = sqliteTable('webhook_deliveries', {
+  id: integer('id').primaryKey(),
+  webhookId: integer('webhook_id').notNull(),
+  eventId: integer('event_id').notNull(),
+  status: text('status', { enum: ['pending', 'delivered', 'failed'] }).notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  lastAttemptAt: integer('last_attempt_at', { mode: 'timestamp' }),
+  responseStatus: integer('response_status'),
+  responseBody: text('response_body'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const agentWebhooks = sqliteTable('agent_webhooks', {
   id: integer('id').primaryKey(),
   url: text('url').notNull(),

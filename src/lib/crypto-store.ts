@@ -51,7 +51,8 @@ function deriveKeyFromConfig(): Buffer | null {
     const dbRaw = (process.env.X_MANAGER_DB_PATH || '').trim() || 'var/x-manager.sqlite.db';
     const dbResolved = path.isAbsolute(dbRaw) ? dbRaw : path.join(process.cwd(), dbRaw);
     if (fs.existsSync(dbResolved)) {
-      const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3').default;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const BetterSqlite3 = require('better-sqlite3') as new (...args: unknown[]) => { prepare(sql: string): { get(): unknown }; close(): void };
       const checkDb = new BetterSqlite3(dbResolved, { readonly: true, timeout: 2000 });
       try {
         const row = checkDb.prepare(

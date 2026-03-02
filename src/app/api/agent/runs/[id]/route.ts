@@ -6,8 +6,9 @@ import { agentRuns, agentRunSteps } from '@/lib/db/schema';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const runId = Number.parseInt(params.id, 10);
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const runId = Number.parseInt(id, 10);
   if (!Number.isFinite(runId) || runId <= 0) {
     return NextResponse.json({ error: 'Invalid run id.' }, { status: 400 });
   }

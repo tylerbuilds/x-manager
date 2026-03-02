@@ -5,8 +5,9 @@ import { withIdempotency } from '@/lib/idempotency';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const campaignId = Number.parseInt(params.id, 10);
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const campaignId = Number.parseInt(id, 10);
   if (!Number.isFinite(campaignId) || campaignId <= 0) {
     return NextResponse.json({ error: 'Invalid campaign id.' }, { status: 400 });
   }

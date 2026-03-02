@@ -6,10 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: Request,
-  { params }: { params: { threadRoot: string } },
+  { params }: { params: Promise<{ threadRoot: string }> },
 ) {
   try {
-    const { threadRoot } = params;
+    const { threadRoot } = await params;
 
     if (!threadRoot) {
       return NextResponse.json({ error: 'Thread root ID required.' }, { status: 400 });

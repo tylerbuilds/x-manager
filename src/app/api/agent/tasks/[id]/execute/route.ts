@@ -5,8 +5,9 @@ import { withIdempotency } from '@/lib/idempotency';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const taskId = Number.parseInt(params.id, 10);
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const taskId = Number.parseInt(id, 10);
   if (!Number.isFinite(taskId) || taskId <= 0) {
     return NextResponse.json({ error: 'Invalid task id.' }, { status: 400 });
   }

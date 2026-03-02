@@ -6,8 +6,9 @@ import { scheduledActions } from '@/lib/db/schema';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const actionId = Number.parseInt(params.id, 10);
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const actionId = Number.parseInt(id, 10);
   if (!Number.isFinite(actionId) || actionId <= 0) {
     return NextResponse.json({ error: 'Invalid action id.' }, { status: 400 });
   }
@@ -20,8 +21,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   return NextResponse.json({ action: rows[0] });
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const actionId = Number.parseInt(params.id, 10);
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const actionId = Number.parseInt(id, 10);
   if (!Number.isFinite(actionId) || actionId <= 0) {
     return NextResponse.json({ error: 'Invalid action id.' }, { status: 400 });
   }

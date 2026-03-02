@@ -9,6 +9,8 @@ import { getResolvedXConfig, type ResolvedXConfig } from './x-config';
 import { normalizeAccountSlot } from './account-slots';
 import { decryptAccountTokens } from './x-account-crypto';
 import { markSchedulerStarted, markCycleSuccess, markCycleError } from './scheduler-health';
+import { emitEvent } from './events';
+import { deliverEventToWebhooks } from './webhook-delivery';
 
 type LogFn = (...args: unknown[]) => void;
 
@@ -129,6 +131,21 @@ async function resolveMediaIds(
   return mediaIds;
 }
 
+function emitAndDeliver(
+  eventType: 'post.posted' | 'post.failed' | 'post.cancelled',
+  entityType: string,
+  entityId: number,
+  accountSlot: number,
+  payload: Record<string, unknown>,
+): void {
+  try {
+    const eventId = emitEvent({ eventType, entityType, entityId, accountSlot, payload });
+    deliverEventToWebhooks(eventId, { eventType, entityType, entityId, accountSlot, payload });
+  } catch {
+    // Never let event emission crash the scheduler cycle.
+  }
+}
+
 export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger): Promise<SchedulerCycleResult> {
   const leaseSeconds = Math.max(30, Number(process.env.SCHEDULER_LOCK_LEASE_SECONDS || 90));
   const nowEpoch = Math.floor(Date.now() / 1000);
@@ -236,6 +253,7 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
               const message = `Blocked by thread index ${prevIndex} (post ${prev.id}) which is ${prev.status}.`;
               await updatePostStatus(post.id, 'cancelled', undefined, message);
               logger.warn(`Post ${post.id} cancelled: ${message}`);
+              emitAndDeliver('post.cancelled', 'post', post.id, post.accountSlot, { reason: message, threadId: post.threadId });
               continue;
             } else {
               logger.info(`Post ${post.id} waiting: thread index ${prevIndex} (post ${prev.id}) not posted yet.`);
@@ -267,6 +285,7 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
           await updatePostStatus(post.id, 'failed', undefined, message);
           failed += 1;
           logger.error(`Post ${post.id} failed: ${message}`);
+          emitAndDeliver('post.failed', 'post', post.id, post.accountSlot, { error: message, threadId: post.threadId });
           continue;
         }
 
@@ -274,6 +293,7 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
           await updatePostStatus(post.id, 'posted', result.data.id);
           posted += 1;
           logger.info(`Post ${post.id} published to X as ${result.data.id}`);
+          emitAndDeliver('post.posted', 'post', post.id, post.accountSlot, { twitterPostId: result.data.id, threadId: post.threadId });
 
           if (hasThread && threadIndex !== null) {
             threadLatest.set(post.threadId as string, { index: threadIndex, twitterPostId: result.data.id });
@@ -288,11 +308,13 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
         await updatePostStatus(post.id, 'failed', undefined, fallbackMessage);
         failed += 1;
         logger.error(`Post ${post.id} failed: unexpected response shape.`);
+        emitAndDeliver('post.failed', 'post', post.id, post.accountSlot, { error: fallbackMessage, threadId: post.threadId });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error';
         await updatePostStatus(post.id, 'failed', undefined, message);
         failed += 1;
         logger.error(`Post ${post.id} failed with exception: ${message}`);
+        emitAndDeliver('post.failed', 'post', post.id, post.accountSlot, { error: message, threadId: post.threadId });
       }
     }
 

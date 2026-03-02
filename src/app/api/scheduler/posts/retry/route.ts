@@ -9,8 +9,10 @@ export const dynamic = 'force-dynamic';
 type RetryRequest = {
   id?: unknown;
   ids?: unknown;
+  thread_id?: unknown;
   account_slot?: unknown;
   include_cancelled?: unknown;
+  scheduled_time?: unknown;
 };
 
 function asInt(value: unknown): number | null {
@@ -54,6 +56,31 @@ export async function POST(req: Request) {
       : [];
     const targetIds = [...new Set([...(idFromBody && idFromBody > 0 ? [idFromBody] : []), ...idsFromBody])];
 
+    // Resolve thread_id: find all failed/cancelled posts in that thread
+    const threadId = typeof body.thread_id === 'string' ? body.thread_id.trim() : null;
+    if (threadId) {
+      const threadPosts = await db
+        .select({ id: scheduledPosts.id })
+        .from(scheduledPosts)
+        .where(
+          and(
+            eq(scheduledPosts.threadId, threadId),
+            inArray(scheduledPosts.status, targetStatuses as Array<'failed' | 'cancelled'>),
+          ),
+        );
+      for (const row of threadPosts) {
+        if (!targetIds.includes(row.id)) targetIds.push(row.id);
+      }
+    }
+
+    // Parse optional scheduled_time for rescheduling
+    const scheduledTime = typeof body.scheduled_time === 'string'
+      ? new Date(body.scheduled_time)
+      : null;
+    if (scheduledTime && Number.isNaN(scheduledTime.getTime())) {
+      return NextResponse.json({ error: 'Invalid scheduled_time. Provide a valid ISO 8601 string.' }, { status: 400 });
+    }
+
     const slotRaw = asInt(body.account_slot);
     if (slotRaw !== null && !isAccountSlot(slotRaw)) {
       return NextResponse.json({ error: 'Invalid account_slot. Use 1 or 2.' }, { status: 400 });
@@ -84,6 +111,7 @@ export async function POST(req: Request) {
       .update(scheduledPosts)
       .set({
         status: 'scheduled',
+        scheduledTime: scheduledTime ?? new Date(),
         twitterPostId: null,
         errorMessage: null,
         updatedAt: new Date(),

@@ -7,8 +7,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // GET - list notes for an inbox item
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
-  const inboxId = Number.parseInt(params.id, 10);
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const inboxId = Number.parseInt(id, 10);
   if (!Number.isFinite(inboxId) || inboxId <= 0) {
     return NextResponse.json({ error: 'Invalid inbox id.' }, { status: 400 });
   }
@@ -18,8 +19,9 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 // POST - add a note
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const inboxId = Number.parseInt(params.id, 10);
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const inboxId = Number.parseInt(id, 10);
   if (!Number.isFinite(inboxId) || inboxId <= 0) {
     return NextResponse.json({ error: 'Invalid inbox id.' }, { status: 400 });
   }

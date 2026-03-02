@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { and, eq, isNotNull, desc } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, desc } from 'drizzle-orm';
 import { db, sqlite } from './db';
 import { scheduledPosts, postMetrics, xAccounts } from './db/schema';
 import { getResolvedXConfig, type ResolvedXConfig } from './x-config';
@@ -32,6 +32,7 @@ async function getConnectedAccounts() {
 }
 
 async function getPostedTweets() {
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   return db
     .select({
       id: scheduledPosts.id,
@@ -43,6 +44,7 @@ async function getPostedTweets() {
       and(
         eq(scheduledPosts.status, 'posted'),
         isNotNull(scheduledPosts.twitterPostId),
+        gte(scheduledPosts.scheduledTime, thirtyDaysAgo),
       ),
     );
 }

@@ -1,28 +1,12 @@
-import crypto from 'crypto';
 import { NextResponse } from 'next/server';
-import { and, eq, inArray } from 'drizzle-orm';
 
-import { db } from '@/lib/db';
-import { scheduledPosts } from '@/lib/db/schema';
 import { parseAccountSlot, type AccountSlot } from '@/lib/account-slots';
-import { canonicalizeUrl, computeDedupeKey, extractFirstUrl, normalizeCopy } from '@/lib/scheduler-dedupe';
-import { ensureSafeUploadUrl } from '@/lib/uploads';
+import { scheduleThread, type ThreadTweetInput } from '@/lib/thread-scheduler';
 import { withIdempotency } from '@/lib/idempotency';
+import { suggestOptimalTime } from '@/lib/optimal-time';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-
-type ThreadTweetInput = {
-  text: string;
-  mediaUrls?: string[] | null;
-  media_urls?: string[] | null;
-  communityId?: string | null;
-  community_id?: string | null;
-  replyToTweetId?: string | null;
-  reply_to_tweet_id?: string | null;
-  sourceUrl?: string | null;
-  source_url?: string | null;
-};
 
 type ThreadScheduleRequest = {
   accountSlot?: unknown;
@@ -38,6 +22,8 @@ type ThreadScheduleRequest = {
   thread_id?: unknown;
   sourceUrl?: unknown;
   source_url?: unknown;
+  autoOptimalTime?: unknown;
+  auto_optimal_time?: unknown;
   tweets?: unknown;
 };
 
@@ -63,19 +49,6 @@ function asBool(value: unknown, defaultValue: boolean): boolean {
   return defaultValue;
 }
 
-function pickMediaUrls(input: ThreadTweetInput): string[] {
-  const raw = input.mediaUrls ?? input.media_urls ?? [];
-  if (!raw) return [];
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((item): item is string => typeof item === 'string').slice(0, 4);
-}
-
-function normalizeMediaUrls(urls: string[]): string[] {
-  return urls
-    .map((value) => (typeof value === 'string' ? ensureSafeUploadUrl(value) : null))
-    .filter((value): value is string => Boolean(value));
-}
-
 export async function POST(req: Request) {
   return withIdempotency('scheduler-thread', req, async () => {
     try {
@@ -91,11 +64,17 @@ export async function POST(req: Request) {
       accountSlot = parsed;
     }
 
-    const scheduledTimeRaw = asString(body.scheduled_time ?? body.scheduledTime);
-    const scheduledAt = scheduledTimeRaw ? new Date(scheduledTimeRaw) : null;
-
-    if (!scheduledAt || Number.isNaN(scheduledAt.getTime())) {
-      return NextResponse.json({ error: 'Invalid scheduled_time. Provide an ISO date string.' }, { status: 400 });
+    const autoOptimalTime = asBool(body.auto_optimal_time ?? body.autoOptimalTime, false);
+    let scheduledAt: Date;
+    if (autoOptimalTime) {
+      scheduledAt = suggestOptimalTime(accountSlot);
+    } else {
+      const scheduledTimeRaw = asString(body.scheduled_time ?? body.scheduledTime);
+      const parsed = scheduledTimeRaw ? new Date(scheduledTimeRaw) : null;
+      if (!parsed || Number.isNaN(parsed.getTime())) {
+        return NextResponse.json({ error: 'Invalid scheduled_time. Provide an ISO date string or set auto_optimal_time=true.' }, { status: 400 });
+      }
+      scheduledAt = parsed;
     }
 
     const tweetsRaw = body.tweets;
@@ -105,125 +84,35 @@ export async function POST(req: Request) {
 
     const tweets = tweetsRaw as ThreadTweetInput[];
     const dedupe = asBool(body.dedupe, true);
-    const threadId = asString(body.thread_id ?? body.threadId) ?? crypto.randomUUID();
-    const defaultCommunityId = asString(body.community_id ?? body.communityId);
-    const threadReplyToTweetId = asString(body.reply_to_tweet_id ?? body.replyToTweetId);
-    const threadSourceUrl = asString(body.source_url ?? body.sourceUrl);
+    const threadId = asString(body.thread_id ?? body.threadId) ?? undefined;
+    const communityId = asString(body.community_id ?? body.communityId);
+    const replyToTweetId = asString(body.reply_to_tweet_id ?? body.replyToTweetId);
+    const sourceUrl = asString(body.source_url ?? body.sourceUrl);
 
-    // Pre-compute dedupe keys and check for duplicates before inserting anything.
-    const computed = tweets.map((tweet, index) => {
-      const text = typeof tweet.text === 'string' ? tweet.text : '';
-      const mediaUrls = normalizeMediaUrls(pickMediaUrls(tweet));
-      const communityId = asString(tweet.community_id ?? tweet.communityId) ?? defaultCommunityId;
-      const replyToTweetId = index === 0
-        ? (asString(tweet.reply_to_tweet_id ?? tweet.replyToTweetId) ?? threadReplyToTweetId)
-        : null;
-
-      const sourceUrlCandidate =
-        (index === 0 ? threadSourceUrl : null) ??
-        asString(tweet.source_url ?? tweet.sourceUrl) ??
-        extractFirstUrl(text);
-
-      const canonicalUrl = sourceUrlCandidate ? canonicalizeUrl(sourceUrlCandidate) : null;
-      const normalizedCopy = normalizeCopy(text);
-      const dedupeKey = dedupe && canonicalUrl
-        ? computeDedupeKey({ accountSlot, canonicalUrl, normalizedCopy })
-        : null;
-
-      return {
-        index,
-        text,
-        mediaUrls,
-        communityId,
-        replyToTweetId,
-        sourceUrl: canonicalUrl,
-        dedupeKey,
-      };
+    const result = await scheduleThread({
+      accountSlot,
+      scheduledTime: scheduledAt,
+      tweets,
+      threadId,
+      dedupe,
+      communityId,
+      replyToTweetId,
+      sourceUrl,
     });
 
-    const invalidText = computed.find((tweet) => !tweet.text.trim());
-    if (invalidText) {
-      return NextResponse.json({ error: 'All tweets must have non-empty text.' }, { status: 400 });
-    }
-
-    const keysToCheck = computed.map((tweet) => tweet.dedupeKey).filter((key): key is string => Boolean(key));
-    if (dedupe && keysToCheck.length > 0) {
-      const existing = await db
-        .select()
-        .from(scheduledPosts)
-        .where(
-          and(
-            eq(scheduledPosts.accountSlot, accountSlot),
-            eq(scheduledPosts.status, 'scheduled'),
-            inArray(scheduledPosts.dedupeKey, keysToCheck),
-          ),
-        );
-
-      if (existing.length > 0) {
-        return NextResponse.json({
-          skipped: true,
-          reason: 'dedupe',
-          duplicates: existing.map((post) => ({
-            id: post.id,
-            accountSlot: post.accountSlot,
-            scheduledTime: post.scheduledTime,
-            text: post.text,
-            sourceUrl: post.sourceUrl,
-          })),
-        });
-      }
-    }
-
-    const values = computed.map((tweet) => ({
-      accountSlot,
-      text: tweet.text,
-      sourceUrl: tweet.sourceUrl,
-      dedupeKey: tweet.dedupeKey,
-      threadId,
-      threadIndex: tweet.index,
-      mediaUrls: JSON.stringify(tweet.mediaUrls),
-      communityId: tweet.communityId,
-      replyToTweetId: tweet.replyToTweetId,
-      scheduledTime: scheduledAt,
-      status: 'scheduled' as const,
-    }));
-
-    try {
-      const inserted = await db.insert(scheduledPosts).values(values).returning();
+    if (result.skipped) {
       return NextResponse.json({
-        threadId,
-        scheduled: inserted.length,
-        posts: inserted,
+        skipped: true,
+        reason: 'dedupe',
+        duplicates: result.duplicates,
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (dedupe && message.includes('SQLITE_CONSTRAINT') && keysToCheck.length > 0) {
-        const existing = await db
-          .select()
-          .from(scheduledPosts)
-          .where(
-            and(
-              eq(scheduledPosts.accountSlot, accountSlot),
-              eq(scheduledPosts.status, 'scheduled'),
-              inArray(scheduledPosts.dedupeKey, keysToCheck),
-            ),
-          );
-        if (existing.length > 0) {
-          return NextResponse.json({
-            skipped: true,
-            reason: 'dedupe',
-            duplicates: existing.map((post) => ({
-              id: post.id,
-              accountSlot: post.accountSlot,
-              scheduledTime: post.scheduledTime,
-              text: post.text,
-              sourceUrl: post.sourceUrl,
-            })),
-          });
-        }
-      }
-      throw error;
     }
+
+    return NextResponse.json({
+      threadId: result.threadId,
+      scheduled: result.scheduled,
+      posts: result.posts,
+    });
     } catch (error) {
       console.error('Error scheduling thread:', error);
       return NextResponse.json({ error: 'Failed to schedule thread.' }, { status: 500 });

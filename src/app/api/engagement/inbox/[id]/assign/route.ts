@@ -7,8 +7,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // PUT - assign inbox item to a user
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const inboxId = Number.parseInt(params.id, 10);
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const inboxId = Number.parseInt(id, 10);
   if (!Number.isFinite(inboxId) || inboxId <= 0) {
     return NextResponse.json({ error: 'Invalid inbox id.' }, { status: 400 });
   }

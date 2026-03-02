@@ -47,9 +47,10 @@ function parseTaskId(raw: string): number | null {
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const taskId = parseTaskId(params.id);
+    const { id } = await params;
+    const taskId = parseTaskId(id);
     if (!taskId) {
       return NextResponse.json({ error: 'Invalid task id.' }, { status: 400 });
     }

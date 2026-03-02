@@ -7,8 +7,16 @@ const distDir = configuredDistDir || (isProd ? '.next' : '.next-local');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir,
-  experimental: {
-    instrumentationHook: true,
+  output: 'standalone',
+  outputFileTracingIncludes: {
+    '/': ['./node_modules/better-sqlite3/**/*'],
+  },
+  // Prevent webpack eval() in edge-instrumentation bundle (Next.js 15 devtool issue).
+  webpack: (config, { isServer, nextRuntime }) => {
+    if (isServer && nextRuntime === 'edge') {
+      config.devtool = false;
+    }
+    return config;
   },
 };
 

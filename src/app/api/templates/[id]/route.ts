@@ -6,8 +6,9 @@ import { postTemplates } from '@/lib/db/schema';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const templateId = Number.parseInt(params.id, 10);
+export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const templateId = Number.parseInt(id, 10);
   if (!Number.isFinite(templateId) || templateId <= 0) {
     return NextResponse.json({ error: 'Invalid template id.' }, { status: 400 });
   }
@@ -32,8 +33,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const templateId = Number.parseInt(params.id, 10);
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const templateId = Number.parseInt(id, 10);
   if (!Number.isFinite(templateId) || templateId <= 0) {
     return NextResponse.json({ error: 'Invalid template id.' }, { status: 400 });
   }

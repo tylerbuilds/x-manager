@@ -41,7 +41,7 @@ const KNOWN_TABLES = new Set([
   'api_idempotency', 'agent_runs', 'agent_run_steps', 'scheduled_actions',
   'x_api_calls', 'engagement_cursors', 'inbox_tags', 'inbox_notes',
   'draft_posts', 'post_templates', 'post_metrics', 'saved_replies',
-  'content_queue', 'agent_webhooks',
+  'content_queue', 'agent_webhooks', 'events', 'webhook_deliveries',
 ]);
 
 function hasColumn(sqlite: SqliteDb, tableName: string, columnName: string): boolean {
@@ -470,6 +470,41 @@ export function ensureSchema(sqlite: SqliteDb): void {
     );
     CREATE INDEX IF NOT EXISTS idx_agent_webhooks_active
       ON agent_webhooks(active);
+
+    -- Sprint 1: Events
+    CREATE TABLE IF NOT EXISTS events (
+      id INTEGER PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      account_slot INTEGER,
+      payload TEXT,
+      read_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_events_type_created
+      ON events(event_type, created_at);
+    CREATE INDEX IF NOT EXISTS idx_events_entity
+      ON events(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS idx_events_unread
+      ON events(read_at, created_at) WHERE read_at IS NULL;
+
+    -- Sprint 1: Webhook Deliveries
+    CREATE TABLE IF NOT EXISTS webhook_deliveries (
+      id INTEGER PRIMARY KEY,
+      webhook_id INTEGER NOT NULL,
+      event_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_attempt_at INTEGER,
+      response_status INTEGER,
+      response_body TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_webhook
+      ON webhook_deliveries(webhook_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event
+      ON webhook_deliveries(event_id);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks
