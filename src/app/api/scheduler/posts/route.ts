@@ -5,7 +5,7 @@ import path from 'path';
 import { and, count, desc, eq, gte, lte, like, type SQL } from 'drizzle-orm';
 
 import { db, sqlite } from '@/lib/db';
-import { scheduledPosts } from '@/lib/db/schema';
+import { scheduledPosts, mediaLibrary } from '@/lib/db/schema';
 import { isAccountSlot, parseAccountSlot, type AccountSlot } from '@/lib/account-slots';
 import { canonicalizeUrl, computeDedupeKey, extractFirstUrl, normalizeCopy } from '@/lib/scheduler-dedupe';
 import {
@@ -262,6 +262,25 @@ export async function POST(req: Request) {
     }
 
     const mediaUrls: string[] = [];
+
+    // Resolve media_library_ids to file paths
+    const mediaLibraryIdsRaw = (formData.get('media_library_ids') as string | null)?.trim() || null;
+    if (mediaLibraryIdsRaw) {
+      try {
+        const ids = JSON.parse(mediaLibraryIdsRaw) as number[];
+        if (Array.isArray(ids)) {
+          for (const id of ids) {
+            const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id)).limit(1);
+            if (item) {
+              mediaUrls.push(`/uploads/library/${item.filename}`);
+            }
+          }
+        }
+      } catch {
+        return NextResponse.json({ error: 'Invalid media_library_ids. Provide a JSON array of IDs.' }, { status: 400 });
+      }
+    }
+
     if (files.length > 0) {
       const uploadDir = path.join(process.cwd(), 'public', 'uploads');
       await fs.mkdir(uploadDir, { recursive: true });

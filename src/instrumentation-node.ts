@@ -45,6 +45,22 @@ export function registerNodeInstrumentation(): void {
     console.log('[instrumentation] Action scheduler started (30s interval).');
   });
 
+  void startWithRetry('Recurring processor', async () => {
+    const { processRecurringSchedules } = await import('./lib/recurring-processor');
+    const intervalMs = Math.max(60, Number(process.env.RECURRING_INTERVAL_SECONDS) || 300) * 1000;
+    setInterval(async () => {
+      try {
+        const result = await processRecurringSchedules();
+        if (result.created > 0) {
+          console.log(`[recurring] Processed ${result.processed} schedules, created ${result.created} posts.`);
+        }
+      } catch (error) {
+        console.error('[recurring] Error in recurring processor cycle:', error);
+      }
+    }, intervalMs);
+    console.log(`[instrumentation] Recurring processor started (${intervalMs / 1000}s interval).`);
+  });
+
   if (process.env.DISABLE_METRICS_COLLECTOR === 'true') {
     console.log('[instrumentation] Metrics collector disabled via DISABLE_METRICS_COLLECTOR.');
   } else {

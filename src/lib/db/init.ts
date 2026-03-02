@@ -42,6 +42,9 @@ const KNOWN_TABLES = new Set([
   'x_api_calls', 'engagement_cursors', 'inbox_tags', 'inbox_notes',
   'draft_posts', 'post_templates', 'post_metrics', 'saved_replies',
   'content_queue', 'agent_webhooks', 'events', 'webhook_deliveries',
+  'media_library', 'recurring_schedules', 'content_pool',
+  'automation_rules', 'automation_rule_runs', 'feeds', 'feed_entries',
+  'saved_searches', 'saved_search_matches',
 ]);
 
 function hasColumn(sqlite: SqliteDb, tableName: string, columnName: string): boolean {
@@ -505,6 +508,160 @@ export function ensureSchema(sqlite: SqliteDb): void {
       ON webhook_deliveries(webhook_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_event
       ON webhook_deliveries(event_id);
+
+    -- Sprint 2: Media Library
+    CREATE TABLE IF NOT EXISTS media_library (
+      id INTEGER PRIMARY KEY,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER,
+      tags TEXT,
+      description TEXT,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      uploaded_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_media_library_mime
+      ON media_library(mime_type);
+    CREATE INDEX IF NOT EXISTS idx_media_library_uploaded
+      ON media_library(uploaded_at);
+
+    -- Sprint 2: Recurring Schedules
+    CREATE TABLE IF NOT EXISTS recurring_schedules (
+      id INTEGER PRIMARY KEY,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      name TEXT NOT NULL,
+      text TEXT,
+      media_library_ids TEXT,
+      community_id TEXT,
+      frequency TEXT NOT NULL,
+      cron_expression TEXT,
+      next_run_at INTEGER,
+      last_run_at INTEGER,
+      times_run INTEGER NOT NULL DEFAULT 0,
+      max_runs INTEGER,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_recurring_schedules_status_next
+      ON recurring_schedules(status, next_run_at);
+    CREATE INDEX IF NOT EXISTS idx_recurring_schedules_account
+      ON recurring_schedules(account_slot, status);
+
+    -- Sprint 2: Content Pool
+    CREATE TABLE IF NOT EXISTS content_pool (
+      id INTEGER PRIMARY KEY,
+      recurring_schedule_id INTEGER NOT NULL,
+      text TEXT NOT NULL,
+      media_library_ids TEXT,
+      used_count INTEGER NOT NULL DEFAULT 0,
+      last_used_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_content_pool_schedule
+      ON content_pool(recurring_schedule_id, used_count);
+
+    -- Sprint 3: Automation Rules
+    CREATE TABLE IF NOT EXISTS automation_rules (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      trigger_type TEXT NOT NULL,
+      trigger_config TEXT NOT NULL,
+      conditions TEXT NOT NULL DEFAULT '[]',
+      action_type TEXT NOT NULL,
+      action_config TEXT NOT NULL DEFAULT '{}',
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      run_count INTEGER NOT NULL DEFAULT 0,
+      last_run_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_automation_rules_enabled
+      ON automation_rules(enabled, trigger_type, account_slot);
+
+    CREATE TABLE IF NOT EXISTS automation_rule_runs (
+      id INTEGER PRIMARY KEY,
+      rule_id INTEGER NOT NULL,
+      trigger_type TEXT NOT NULL,
+      trigger_source TEXT,
+      status TEXT NOT NULL,
+      input_json TEXT,
+      output_json TEXT,
+      error TEXT,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_automation_rule_runs_rule
+      ON automation_rule_runs(rule_id, created_at);
+
+    -- Sprint 3: RSS Feeds
+    CREATE TABLE IF NOT EXISTS feeds (
+      id INTEGER PRIMARY KEY,
+      url TEXT NOT NULL,
+      title TEXT,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      check_interval_minutes INTEGER NOT NULL DEFAULT 15,
+      last_checked_at INTEGER,
+      last_entry_id TEXT,
+      auto_schedule INTEGER NOT NULL DEFAULT 0,
+      template TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_feeds_status_checked
+      ON feeds(status, last_checked_at);
+
+    CREATE TABLE IF NOT EXISTS feed_entries (
+      id INTEGER PRIMARY KEY,
+      feed_id INTEGER NOT NULL,
+      entry_url TEXT NOT NULL,
+      entry_title TEXT NOT NULL,
+      entry_summary TEXT,
+      published_at INTEGER,
+      scheduled_post_id INTEGER,
+      processed_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_feed_entries_unique
+      ON feed_entries(feed_id, entry_url);
+    CREATE INDEX IF NOT EXISTS idx_feed_entries_feed_created
+      ON feed_entries(feed_id, created_at);
+
+    -- Sprint 3: Saved Searches
+    CREATE TABLE IF NOT EXISTS saved_searches (
+      id INTEGER PRIMARY KEY,
+      keywords TEXT NOT NULL,
+      account_slot INTEGER NOT NULL DEFAULT 1,
+      check_interval_minutes INTEGER NOT NULL DEFAULT 15,
+      last_checked_at INTEGER,
+      auto_action TEXT,
+      reply_template TEXT,
+      notify INTEGER NOT NULL DEFAULT 1,
+      language TEXT DEFAULT 'en',
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_saved_searches_status_checked
+      ON saved_searches(status, last_checked_at);
+
+    CREATE TABLE IF NOT EXISTS saved_search_matches (
+      id INTEGER PRIMARY KEY,
+      search_id INTEGER NOT NULL,
+      match_id TEXT NOT NULL,
+      match_url TEXT NOT NULL,
+      match_text TEXT NOT NULL,
+      action_status TEXT NOT NULL DEFAULT 'none',
+      created_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_saved_search_matches_unique
+      ON saved_search_matches(search_id, match_id);
+    CREATE INDEX IF NOT EXISTS idx_saved_search_matches_search_created
+      ON saved_search_matches(search_id, created_at);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks

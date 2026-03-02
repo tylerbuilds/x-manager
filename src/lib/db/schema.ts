@@ -351,6 +351,136 @@ export const webhookDeliveries = sqliteTable('webhook_deliveries', {
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
+// --- Sprint 2: Media Library ---
+export const mediaLibrary = sqliteTable('media_library', {
+  id: integer('id').primaryKey(),
+  filename: text('filename').notNull(),
+  originalName: text('original_name').notNull(),
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  width: integer('width'),
+  height: integer('height'),
+  tags: text('tags'), // JSON array
+  description: text('description'),
+  usedCount: integer('used_count').notNull().default(0),
+  uploadedAt: integer('uploaded_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 2: Recurring Schedules ---
+export const recurringSchedules = sqliteTable('recurring_schedules', {
+  id: integer('id').primaryKey(),
+  accountSlot: integer('account_slot').notNull().default(1),
+  name: text('name').notNull(),
+  text: text('text'),
+  mediaLibraryIds: text('media_library_ids'), // JSON array of media_library IDs
+  communityId: text('community_id'),
+  frequency: text('frequency', { enum: ['daily', 'weekly', 'biweekly', 'monthly', 'custom_cron'] }).notNull(),
+  cronExpression: text('cron_expression'), // for custom_cron
+  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  timesRun: integer('times_run').notNull().default(0),
+  maxRuns: integer('max_runs'), // null = unlimited
+  status: text('status', { enum: ['active', 'paused', 'exhausted'] }).notNull().default('active'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 2: Content Pool (rotating content for recurring schedules) ---
+export const contentPool = sqliteTable('content_pool', {
+  id: integer('id').primaryKey(),
+  recurringScheduleId: integer('recurring_schedule_id').notNull(),
+  text: text('text').notNull(),
+  mediaLibraryIds: text('media_library_ids'), // JSON array
+  usedCount: integer('used_count').notNull().default(0),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 3: Automation Rules ---
+export const automationRules = sqliteTable('automation_rules', {
+  id: integer('id').primaryKey(),
+  name: text('name').notNull(),
+  triggerType: text('trigger_type', { enum: ['event', 'schedule', 'keyword'] }).notNull(),
+  triggerConfig: text('trigger_config').notNull(), // JSON
+  conditions: text('conditions').notNull().default('[]'), // JSON array
+  actionType: text('action_type', {
+    enum: ['like', 'reply', 'repost', 'schedule_post', 'send_dm', 'dismiss', 'tag', 'webhook'],
+  }).notNull(),
+  actionConfig: text('action_config').notNull().default('{}'), // JSON
+  accountSlot: integer('account_slot').notNull().default(1),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  runCount: integer('run_count').notNull().default(0),
+  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const automationRuleRuns = sqliteTable('automation_rule_runs', {
+  id: integer('id').primaryKey(),
+  ruleId: integer('rule_id').notNull(),
+  triggerType: text('trigger_type').notNull(),
+  triggerSource: text('trigger_source'),
+  status: text('status', { enum: ['success', 'failed', 'skipped'] }).notNull(),
+  inputJson: text('input_json'),
+  outputJson: text('output_json'),
+  error: text('error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 3: RSS Feeds ---
+export const feeds = sqliteTable('feeds', {
+  id: integer('id').primaryKey(),
+  url: text('url').notNull(),
+  title: text('title'),
+  accountSlot: integer('account_slot').notNull().default(1),
+  checkIntervalMinutes: integer('check_interval_minutes').notNull().default(15),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+  lastEntryId: text('last_entry_id'),
+  autoSchedule: integer('auto_schedule', { mode: 'boolean' }).notNull().default(false),
+  template: text('template'),
+  status: text('status', { enum: ['active', 'paused'] }).notNull().default('active'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const feedEntries = sqliteTable('feed_entries', {
+  id: integer('id').primaryKey(),
+  feedId: integer('feed_id').notNull(),
+  entryUrl: text('entry_url').notNull(),
+  entryTitle: text('entry_title').notNull(),
+  entrySummary: text('entry_summary'),
+  publishedAt: integer('published_at', { mode: 'timestamp' }),
+  scheduledPostId: integer('scheduled_post_id'),
+  processedAt: integer('processed_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// --- Sprint 3: Saved Searches ---
+export const savedSearches = sqliteTable('saved_searches', {
+  id: integer('id').primaryKey(),
+  keywords: text('keywords').notNull(), // JSON array
+  accountSlot: integer('account_slot').notNull().default(1),
+  checkIntervalMinutes: integer('check_interval_minutes').notNull().default(15),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+  autoAction: text('auto_action', { enum: ['like', 'reply'] }),
+  replyTemplate: text('reply_template'),
+  notify: integer('notify', { mode: 'boolean' }).notNull().default(true),
+  language: text('language').default('en'),
+  status: text('status', { enum: ['active', 'paused'] }).notNull().default('active'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const savedSearchMatches = sqliteTable('saved_search_matches', {
+  id: integer('id').primaryKey(),
+  searchId: integer('search_id').notNull(),
+  matchId: text('match_id').notNull(),
+  matchUrl: text('match_url').notNull(),
+  matchText: text('match_text').notNull(),
+  actionStatus: text('action_status', { enum: ['none', 'liked', 'replied', 'failed'] }).notNull().default('none'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
 export const agentWebhooks = sqliteTable('agent_webhooks', {
   id: integer('id').primaryKey(),
   url: text('url').notNull(),
