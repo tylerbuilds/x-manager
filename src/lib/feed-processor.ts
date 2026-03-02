@@ -94,7 +94,15 @@ export async function runFeedProcessor(logger: Logger): Promise<void> {
         throw new Error(`Feed fetch failed with status ${response.status}.`);
       }
 
+      const contentLength = Number(response.headers.get('content-length') || 0);
+      const MAX_FEED_SIZE = 2 * 1024 * 1024; // 2MB
+      if (contentLength > MAX_FEED_SIZE) {
+        throw new Error(`Feed response too large (${contentLength} bytes, max ${MAX_FEED_SIZE}).`);
+      }
       const xml = await response.text();
+      if (xml.length > MAX_FEED_SIZE) {
+        throw new Error(`Feed body too large (${xml.length} chars, max ${MAX_FEED_SIZE}).`);
+      }
       const entries = parseFeed(xml);
       let newestEntryId = feed.lastEntryId;
 

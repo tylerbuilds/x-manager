@@ -35,8 +35,9 @@ export async function GET(
   const userAgent = req.headers.get('user-agent') ?? undefined;
   const forwarded = req.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0].trim() : undefined;
+  const ipSalt = process.env.X_MANAGER_ENCRYPTION_KEY || 'x-manager-click-salt';
   const ipHash = ip
-    ? crypto.createHash('sha256').update(ip).digest('hex').slice(0, 16)
+    ? crypto.createHash('sha256').update(`${ipSalt}:${ip}`).digest('hex').slice(0, 16)
     : undefined;
 
   try {

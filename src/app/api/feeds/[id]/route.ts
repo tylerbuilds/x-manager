@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ ok: true, feed: updated[0] });
   } catch (error) {
     console.error('Failed to update feed:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to update feed.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update feed.' }, { status: 500 });
   }
 }
 

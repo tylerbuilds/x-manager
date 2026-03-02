@@ -64,9 +64,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'target_url is required.' }, { status: 400 });
     }
 
-    // Basic URL validation
+    // URL validation — only allow http/https to prevent open redirects (javascript:, data:, etc.)
     try {
-      new URL(targetUrl);
+      const parsed = new URL(targetUrl);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return NextResponse.json({ error: 'target_url must use http or https protocol.' }, { status: 400 });
+      }
     } catch {
       return NextResponse.json({ error: 'Invalid target_url. Provide a valid URL.' }, { status: 400 });
     }

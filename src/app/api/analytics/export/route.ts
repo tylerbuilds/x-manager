@@ -82,6 +82,12 @@ export async function GET(req: Request) {
       )
       .all(...params) as ExportRow[];
 
+    // CSV injection prevention: prefix formula-triggering characters with a single quote
+    const sanitizeCsvCell = (value: string): string => {
+      if (/^[=+\-@\t\r]/.test(value)) return `'${value}`;
+      return value;
+    };
+
     if (format === 'csv') {
       const headers = [
         'id', 'account_slot', 'text', 'source_url', 'scheduled_time', 'posted_time',
@@ -98,8 +104,8 @@ export async function GET(req: Request) {
         return [
           r.id,
           r.account_slot,
-          `"${(r.text || '').replace(/"/g, '""')}"`,
-          r.source_url ?? '',
+          `"${sanitizeCsvCell((r.text || '').replace(/"/g, '""'))}"`,
+          sanitizeCsvCell(r.source_url ?? ''),
           new Date(r.scheduled_time * 1000).toISOString(),
           r.status === 'posted' ? new Date(r.scheduled_time * 1000).toISOString() : '',
           r.status,

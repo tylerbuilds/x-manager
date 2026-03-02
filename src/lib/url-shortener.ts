@@ -5,10 +5,16 @@ const CODE_LENGTH = 7;
 const CODE_CHARS = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars
 
 function generateShortCode(): string {
-  const bytes = crypto.randomBytes(CODE_LENGTH);
+  // Rejection sampling to avoid modulo bias (alphabet length 57 doesn't divide 256 evenly)
+  const maxValid = Math.floor(256 / CODE_CHARS.length) * CODE_CHARS.length;
   let code = '';
-  for (let i = 0; i < CODE_LENGTH; i++) {
-    code += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+  while (code.length < CODE_LENGTH) {
+    const bytes = crypto.randomBytes(CODE_LENGTH * 2);
+    for (let i = 0; i < bytes.length && code.length < CODE_LENGTH; i++) {
+      if (bytes[i] < maxValid) {
+        code += CODE_CHARS[bytes[i] % CODE_CHARS.length];
+      }
+    }
   }
   return code;
 }
@@ -69,21 +75,26 @@ export function resolveShortUrl(code: string): ShortUrlRow | null {
   ) ?? null;
 }
 
+const recordClickTx = sqlite.transaction(
+  (shortUrlId: number, referer: string | null, userAgent: string | null, ipHash: string | null) => {
+    sqlite
+      .prepare(
+        `INSERT INTO url_clicks (short_url_id, referer, user_agent, ip_hash, clicked_at)
+         VALUES (?, ?, ?, ?, unixepoch())`,
+      )
+      .run(shortUrlId, referer, userAgent, ipHash);
+
+    sqlite
+      .prepare(`UPDATE short_urls SET click_count = click_count + 1 WHERE id = ?`)
+      .run(shortUrlId);
+  },
+);
+
 export function recordClick(
   shortUrlId: number,
   options: { referer?: string; userAgent?: string; ipHash?: string },
 ): void {
-  sqlite
-    .prepare(
-      `INSERT INTO url_clicks (short_url_id, referer, user_agent, ip_hash, clicked_at)
-       VALUES (?, ?, ?, ?, unixepoch())`,
-    )
-    .run(shortUrlId, options.referer ?? null, options.userAgent ?? null, options.ipHash ?? null);
-
-  // Atomic increment
-  sqlite
-    .prepare(`UPDATE short_urls SET click_count = click_count + 1 WHERE id = ?`)
-    .run(shortUrlId);
+  recordClickTx(shortUrlId, options.referer ?? null, options.userAgent ?? null, options.ipHash ?? null);
 }
 
 export function getClickStats(shortUrlId: number, days = 30): {

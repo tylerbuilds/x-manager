@@ -44,6 +44,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, feed: inserted[0] }, { status: 201 });
   } catch (error) {
     console.error('Failed to create feed:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Failed to create feed.' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create feed.' }, { status: 500 });
   }
 }

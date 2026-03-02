@@ -130,12 +130,14 @@ export function getFollowerGrowth(
   };
 }
 
-let _trackerStarted = false;
+declare global {
+  var __xManagerFollowerTrackerStarted: boolean | undefined;
+}
 
 export function isFollowerTrackerStarted(): boolean {
-  return _trackerStarted;
+  return globalThis.__xManagerFollowerTrackerStarted === true;
 }
 
 export function markFollowerTrackerStarted(): void {
-  _trackerStarted = true;
+  globalThis.__xManagerFollowerTrackerStarted = true;
 }

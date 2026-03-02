@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from './db';
 import { automationRuleRuns, automationRules, engagementInbox, inboxTags } from './db/schema';
 import { emitEvent, onEvent, type EmitEventOptions } from './events';
@@ -83,12 +83,15 @@ function evaluateCondition(condition: Record<string, unknown>, input: unknown): 
       return actual === expected;
     case 'contains':
       return String(actual ?? '').toLowerCase().includes(String(expected ?? '').toLowerCase());
-    case 'regex':
+    case 'regex': {
+      const pattern = String(expected ?? '');
+      if (pattern.length > 200) return false; // Prevent ReDoS via complex patterns
       try {
-        return new RegExp(String(expected ?? ''), 'i').test(String(actual ?? ''));
+        return new RegExp(pattern, 'i').test(String(actual ?? ''));
       } catch {
         return false;
       }
+    }
     case 'gt':
       return Number(actual ?? 0) > Number(expected ?? 0);
     case 'lt':
@@ -160,7 +163,7 @@ async function markRuleExecuted(rule: RuleRow): Promise<void> {
   await db
     .update(automationRules)
     .set({
-      runCount: rule.runCount + 1,
+      runCount: sql`run_count + 1`,
       lastRunAt: new Date(),
       updatedAt: new Date(),
     })
@@ -332,10 +335,17 @@ async function executeRule(rule: RuleRow, context: Record<string, unknown>, trig
   }
 }
 
+const IGNORED_EVENT_PREFIXES = ['automation.'];
+
 export async function processAutomationEvent(
   event: EmitEventOptions & { id: number; createdAt: number },
   logger: Logger = defaultLogger,
 ): Promise<void> {
+  // Prevent infinite loops: skip events emitted by the automation system itself
+  if (IGNORED_EVENT_PREFIXES.some((prefix) => event.eventType.startsWith(prefix))) {
+    return;
+  }
+
   const rules = await db
     .select()
     .from(automationRules)
@@ -345,8 +355,8 @@ export async function processAutomationEvent(
   for (const rule of rules) {
     const triggerConfig = parseJsonObject(rule.triggerConfig);
     const configuredEvent = triggerConfig.event_type;
+    // Rules without event_type configured do NOT match all events (security: prevents catch-all rules)
     const matchesEvent =
-      configuredEvent == null ||
       configuredEvent === '*' ||
       configuredEvent === event.eventType ||
       (Array.isArray(configuredEvent) && configuredEvent.includes(event.eventType));

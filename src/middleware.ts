@@ -9,6 +9,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/system/auth/logout',
   '/api/system/auth/session',
   '/api/twitter/auth/callback',
+  '/api/r/',
 ];
 
 const GLOBAL_RATE_LIMIT_PER_MIN = 120;
