@@ -54,84 +54,92 @@ export async function runKeywordMonitor(logger: Logger): Promise<void> {
       });
 
       for (const topic of result.topics) {
-        const inserted = await db.insert(savedSearchMatches).values({
-          searchId: search.id,
-          matchId: topic.id,
-          matchUrl: topic.url,
-          matchText: topic.text,
-        }).onConflictDoNothing().returning();
+        // S4 fix: try/catch per match so one failure doesn't abort remaining matches
+        try {
+          const inserted = await db.insert(savedSearchMatches).values({
+            searchId: search.id,
+            matchId: topic.id,
+            matchUrl: topic.url,
+            matchText: topic.text,
+          }).onConflictDoNothing().returning();
 
-        if (!inserted[0]) {
-          continue;
-        }
-
-        if (search.notify) {
-          emitEvent({
-            eventType: 'keyword.match',
-            entityType: 'saved_search',
-            entityId: search.id,
-            accountSlot: search.accountSlot,
-            payload: {
-              searchId: search.id,
-              matchId: topic.id,
-              text: topic.text,
-              url: topic.url,
-              authorUsername: topic.author.username,
-            },
-          });
-        }
-
-        await runKeywordTriggeredRules({
-          accountSlot: search.accountSlot as 1 | 2,
-          searchId: search.id,
-          matchId: topic.id,
-          text: topic.text,
-          url: topic.url,
-          authorUsername: topic.author.username,
-        }, logger);
-
-        if (search.autoAction === 'like') {
-          const account = await requireConnectedAccount(search.accountSlot as 1 | 2);
-          if (!account.twitterUserId) {
-            throw new Error(`Saved search ${search.id}: connected account missing twitter user id.`);
-          }
-          await likeTweet(account.twitterAccessToken, account.twitterAccessTokenSecret, account.twitterUserId, topic.id);
-          await db.update(savedSearchMatches).set({ actionStatus: 'liked' }).where(eq(savedSearchMatches.id, inserted[0].id));
-          await recordEngagementAction({
-            accountSlot: search.accountSlot as 1 | 2,
-            actionType: 'like',
-            targetId: topic.id,
-            payload: { searchId: search.id, url: topic.url },
-            status: 'success',
-          });
-        }
-
-        if (search.autoAction === 'reply') {
-          const template = search.replyTemplate || '{suggestedReplyStarter}';
-          const text = renderTemplate(template, {
-            ...topic,
-            suggestedReplyStarter: topic.suggestedReplyStarter,
-          }).trim();
-
-          if (!text) {
+          if (!inserted[0]) {
             continue;
           }
 
-          const account = await requireConnectedAccount(search.accountSlot as 1 | 2);
-          const replyResult = await postTweet(text, account.twitterAccessToken, account.twitterAccessTokenSecret, [], undefined, topic.id);
-          if (replyResult.errors?.length) {
-            throw new Error(replyResult.errors.map((entry) => entry.message).join(' '));
+          if (search.notify) {
+            emitEvent({
+              eventType: 'keyword.match',
+              entityType: 'saved_search',
+              entityId: search.id,
+              accountSlot: search.accountSlot,
+              payload: {
+                searchId: search.id,
+                matchId: topic.id,
+                text: topic.text,
+                url: topic.url,
+                authorUsername: topic.author.username,
+              },
+            });
           }
 
-          await db.update(savedSearchMatches).set({ actionStatus: 'replied' }).where(eq(savedSearchMatches.id, inserted[0].id));
-          await recordEngagementAction({
+          await runKeywordTriggeredRules({
             accountSlot: search.accountSlot as 1 | 2,
-            actionType: 'reply',
-            targetId: topic.id,
-            payload: { searchId: search.id, text },
-            result: replyResult,
-            status: 'success',
-          });
+            searchId: search.id,
+            matchId: topic.id,
+            text: topic.text,
+            url: topic.url,
+            authorUsername: topic.author.username,
+          }, logger);
+
+          if (search.autoAction === 'like') {
+            const account = await requireConnectedAccount(search.accountSlot as 1 | 2);
+            if (!account.twitterUserId) {
+              logger.warn(`Saved search ${search.id}: connected account missing twitter user id, skipping like.`);
+              continue;
+            }
+            await likeTweet(account.twitterAccessToken, account.twitterAccessTokenSecret, account.twitterUserId, topic.id);
+            await db.update(savedSearchMatches).set({ actionStatus: 'liked' }).where(eq(savedSearchMatches.id, inserted[0].id));
+            await recordEngagementAction({
+              accountSlot: search.accountSlot as 1 | 2,
+              actionType: 'like',
+              targetId: topic.id,
+              payload: { searchId: search.id, url: topic.url },
+              status: 'success',
+            });
+          }
+
+          if (search.autoAction === 'reply') {
+            const template = search.replyTemplate || '{suggestedReplyStarter}';
+            const text = renderTemplate(template, {
+              ...topic,
+              suggestedReplyStarter: topic.suggestedReplyStarter,
+            }).trim();
+
+            if (!text) {
+              continue;
+            }
+
+            const account = await requireConnectedAccount(search.accountSlot as 1 | 2);
+            const replyResult = await postTweet(text, account.twitterAccessToken, account.twitterAccessTokenSecret, [], undefined, topic.id);
+            if (replyResult.errors?.length) {
+              logger.error(`Reply failed for match ${topic.id}:`, replyResult.errors.map((entry) => entry.message).join(' '));
+              continue;
+            }
+
+            await db.update(savedSearchMatches).set({ actionStatus: 'replied' }).where(eq(savedSearchMatches.id, inserted[0].id));
+            await recordEngagementAction({
+              accountSlot: search.accountSlot as 1 | 2,
+              actionType: 'reply',
+              targetId: topic.id,
+              payload: { searchId: search.id, text },
+              result: replyResult,
+              status: 'success',
+            });
+          }
+        } catch (matchError) {
+          logger.error(`Keyword monitor: error processing match ${topic.id} for search ${search.id}:`, matchError);
+          // Continue processing remaining matches
         }
       }
 

@@ -27,7 +27,7 @@ export function registerNodeInstrumentation(): void {
 
   process.on('uncaughtException', (error) => {
     console.error('[FATAL] Uncaught exception:', error);
-    process.exit(1);
+    // Do NOT process.exit() — kills the entire single-process Next.js server.
   });
 
   process.on('unhandledRejection', (reason) => {
@@ -96,6 +96,13 @@ export function registerNodeInstrumentation(): void {
       takeFollowerSnapshots();
     } catch { /* best-effort */ }
     console.log('[instrumentation] Follower tracker started (1h interval).');
+  });
+
+  // S5 fix: Recover pending webhook deliveries that were lost on previous restart
+  void startWithRetry('Webhook recovery', async () => {
+    const { recoverPendingDeliveries } = await import('./lib/webhook-delivery');
+    recoverPendingDeliveries();
+    console.log('[instrumentation] Webhook delivery recovery complete.');
   });
 
   if (process.env.DISABLE_METRICS_COLLECTOR === 'true') {

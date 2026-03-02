@@ -13,14 +13,15 @@ export const dynamic = 'force-dynamic';
 
 const MEDIA_DIR = path.join(process.cwd(), 'public', 'uploads', 'library');
 
+// H5 fix: SVG removed — allows stored XSS via inline scripts/event handlers
 const ALLOWED_MIME_TYPES = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
   'video/mp4', 'video/quicktime', 'video/webm',
   'audio/mpeg', 'audio/wav', 'audio/ogg',
 ]);
 
 const ALLOWED_EXTENSIONS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
   '.mp4', '.mov', '.webm',
   '.mp3', '.wav', '.ogg',
 ]);

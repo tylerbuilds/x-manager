@@ -95,6 +95,12 @@ export async function GET(req: Request) {
         'replies', 'quotes', 'bookmarks', 'engagement_rate', 'url_clicks',
       ];
 
+      // S12 fix: Quote all string fields to prevent CSV corruption from commas/newlines
+      const quoteCsv = (value: string): string => {
+        const sanitized = sanitizeCsvCell(value);
+        return `"${sanitized.replace(/"/g, '""')}"`;
+      };
+
       const csvRows = rows.map((r) => {
         const totalEngagement = (r.likes ?? 0) + (r.retweets ?? 0) + (r.replies ?? 0) + (r.quotes ?? 0);
         const engagementRate = r.impressions && r.impressions > 0
@@ -104,12 +110,12 @@ export async function GET(req: Request) {
         return [
           r.id,
           r.account_slot,
-          `"${sanitizeCsvCell((r.text || '').replace(/"/g, '""'))}"`,
-          sanitizeCsvCell(r.source_url ?? ''),
-          new Date(r.scheduled_time * 1000).toISOString(),
-          r.status === 'posted' ? new Date(r.scheduled_time * 1000).toISOString() : '',
-          r.status,
-          r.twitter_post_id ?? '',
+          quoteCsv(r.text || ''),
+          quoteCsv(r.source_url ?? ''),
+          quoteCsv(new Date(r.scheduled_time * 1000).toISOString()),
+          quoteCsv(r.status === 'posted' ? new Date(r.scheduled_time * 1000).toISOString() : ''),
+          quoteCsv(r.status),
+          quoteCsv(r.twitter_post_id ?? ''),
           r.impressions ?? '',
           r.likes ?? '',
           r.retweets ?? '',

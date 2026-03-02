@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'account_slot must be 1 or 2.' }, { status: 400 });
     }
 
-    assertPublicUrl(url);
+    await assertPublicUrl(url);
 
     const inserted = await db.insert(feeds).values({
       url,

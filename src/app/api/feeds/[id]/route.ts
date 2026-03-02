@@ -21,7 +21,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const body = await req.json() as Record<string, unknown>;
     const updates: Partial<typeof feeds.$inferInsert> = { updatedAt: new Date() };
     if (typeof body.url === 'string' && body.url.trim()) {
-      assertPublicUrl(body.url.trim());
+      await assertPublicUrl(body.url.trim());
       updates.url = body.url.trim();
     }
     if (typeof body.title === 'string') updates.title = body.title.trim();

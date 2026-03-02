@@ -83,7 +83,9 @@ export async function GET(req: Request) {
 
     const tagFilter = url.searchParams.get('tag')?.trim() || null;
     if (tagFilter) {
-      const escapedTag = tagFilter.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      // S9 fix: Strip " to prevent LIKE pattern escape
+      const sanitizedTag = tagFilter.replace(/"/g, '');
+      const escapedTag = sanitizedTag.replace(/%/g, '\\%').replace(/_/g, '\\_');
       conditions.push(like(scheduledPosts.tags, `%"${escapedTag}"%`));
     }
 
@@ -325,8 +327,17 @@ export async function POST(req: Request) {
   });
 }
 
-export async function DELETE() {
+export async function DELETE(req: Request) {
   try {
+    // C6 fix: Require explicit confirmation to prevent accidental mass deletion
+    const url = new URL(req.url);
+    if (url.searchParams.get('confirm') !== 'delete-all') {
+      return NextResponse.json(
+        { error: 'Mass delete requires ?confirm=delete-all query parameter.' },
+        { status: 400 },
+      );
+    }
+
     const allPosts = await db.select().from(scheduledPosts);
 
     for (const post of allPosts) {

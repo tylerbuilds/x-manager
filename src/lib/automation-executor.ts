@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { db } from './db';
 import { automationRuleRuns, automationRules, engagementInbox, inboxTags } from './db/schema';
-import { emitEvent, onEvent, type EmitEventOptions } from './events';
+import { emitEvent, onEventInternal, type EmitEventOptions } from './events';
 import { shouldRunCronNow } from './cron-utils';
 import { renderTemplate } from './template-utils';
 import { createScheduledPost } from './post-scheduler';
@@ -85,9 +85,16 @@ function evaluateCondition(condition: Record<string, unknown>, input: unknown): 
       return String(actual ?? '').toLowerCase().includes(String(expected ?? '').toLowerCase());
     case 'regex': {
       const pattern = String(expected ?? '');
-      if (pattern.length > 200) return false; // Prevent ReDoS via complex patterns
+      if (pattern.length > 200) return false;
       try {
-        return new RegExp(pattern, 'i').test(String(actual ?? ''));
+        // Run regex in a VM sandbox with 50ms timeout to prevent ReDoS
+        const vm = require('vm') as typeof import('vm');
+        const result = vm.runInNewContext(
+          `new RegExp(pattern, 'i').test(actual)`,
+          { pattern, actual: String(actual ?? '') },
+          { timeout: 50 },
+        );
+        return Boolean(result);
       } catch {
         return false;
       }
@@ -280,7 +287,7 @@ async function executeRuleAction(rule: RuleRow, context: Record<string, unknown>
     case 'webhook': {
       const url = firstString(actionConfig.url);
       if (!url) throw new Error('Webhook action requires a url.');
-      assertPublicUrl(url);
+      await assertPublicUrl(url);
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -328,7 +335,7 @@ async function executeRule(rule: RuleRow, context: Record<string, unknown>, trig
     emitAutomationOutcome('automation.executed', rule, { triggerSource, output });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Automation rule failed.';
-    await markRuleExecuted(rule);
+    // S8 fix: Do NOT increment runCount on failure — only increment on success above
     await logRuleRun(rule.id, rule.triggerType, triggerSource, 'failed', context, undefined, message);
     emitAutomationOutcome('automation.failed', rule, { triggerSource, error: message });
     logger.error(`Automation rule ${rule.id} failed:`, error);
@@ -450,7 +457,7 @@ export function startAutomationEventListener(logger: Logger = defaultLogger): vo
     return;
   }
 
-  onEvent((event) => {
+  onEventInternal((event) => {
     void processAutomationEvent(event, logger);
   });
 

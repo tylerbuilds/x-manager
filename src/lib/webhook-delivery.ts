@@ -123,7 +123,7 @@ async function attemptTrackedDelivery(
   }
 
   try {
-    assertPublicUrl(webhook.url);
+    await assertPublicUrl(webhook.url);
 
     const response = await fetch(webhook.url, {
       method: 'POST',
@@ -230,7 +230,7 @@ async function deliverWebhookLegacy(
   }
 
   try {
-    assertPublicUrl(webhook.url);
+    await assertPublicUrl(webhook.url);
 
     const response = await fetch(webhook.url, {
       method: 'POST',
@@ -249,6 +249,82 @@ async function deliverWebhookLegacy(
     }
   } catch {
     await incrementFailureCount(webhook);
+  }
+}
+
+/**
+ * S5 fix: Recover pending/failed webhook deliveries that were lost on process restart.
+ * Called once on startup to re-attempt deliveries that didn't exhaust their retries.
+ */
+export function recoverPendingDeliveries(): void {
+  try {
+    const pending = sqlite
+      .prepare(
+        `SELECT wd.id, wd.webhook_id, wd.event_id, wd.attempts,
+                aw.id as wh_id, aw.url, aw.events, aw.secret, aw.active
+         FROM webhook_deliveries wd
+         JOIN agent_webhooks aw ON aw.id = wd.webhook_id
+         WHERE wd.status IN ('pending', 'failed')
+           AND wd.attempts < ?
+           AND aw.active = 1
+         ORDER BY wd.created_at ASC
+         LIMIT 50`,
+      )
+      .all(MAX_ATTEMPTS) as Array<{
+        id: number;
+        webhook_id: number;
+        event_id: number;
+        attempts: number;
+        wh_id: number;
+        url: string;
+        events: string;
+        secret: string | null;
+        active: number;
+      }>;
+
+    if (pending.length === 0) return;
+    console.log(`[webhook-delivery] Recovering ${pending.length} pending deliveries.`);
+
+    for (const row of pending) {
+      const event = sqlite
+        .prepare(`SELECT event_type, entity_type, entity_id, account_slot, payload FROM events WHERE id = ?`)
+        .get(row.event_id) as {
+          event_type: string;
+          entity_type: string;
+          entity_id: string;
+          account_slot: number | null;
+          payload: string | null;
+        } | undefined;
+
+      if (!event) {
+        sqlite.prepare(`UPDATE webhook_deliveries SET status = 'failed' WHERE id = ?`).run(row.id);
+        continue;
+      }
+
+      const webhook: WebhookRow = {
+        id: row.wh_id,
+        url: row.url,
+        events: row.events,
+        secret: row.secret,
+        active: row.active,
+      };
+
+      void attemptTrackedDelivery(
+        webhook,
+        row.event_id,
+        row.id,
+        {
+          eventType: event.event_type as EmitEventOptions['eventType'],
+          entityType: event.entity_type,
+          entityId: event.entity_id,
+          accountSlot: event.account_slot ?? undefined,
+          payload: event.payload ? JSON.parse(event.payload) : undefined,
+        },
+        row.attempts + 1,
+      );
+    }
+  } catch (error) {
+    console.error('[webhook-delivery] Failed to recover pending deliveries:', error);
   }
 }
 

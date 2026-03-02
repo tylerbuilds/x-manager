@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    assertPublicUrl(body.url);
+    await assertPublicUrl(body.url);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'url must be a valid public URL.', code: 'VALIDATION_ERROR' }, { status: 400 });
   }

@@ -122,16 +122,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Recurring schedule not found.' }, { status: 404 });
     }
 
-    // Delete schedule + pool atomically
-    sqlite.exec('BEGIN');
-    try {
-      await db.delete(contentPool).where(eq(contentPool.recurringScheduleId, scheduleId));
-      await db.delete(recurringSchedules).where(eq(recurringSchedules.id, scheduleId));
-      sqlite.exec('COMMIT');
-    } catch (e) {
-      sqlite.exec('ROLLBACK');
-      throw e;
-    }
+    // S10 fix: Use sqlite.transaction() instead of mixing sync BEGIN/COMMIT with async Drizzle
+    sqlite.transaction(() => {
+      sqlite.prepare('DELETE FROM content_pool WHERE recurring_schedule_id = ?').run(scheduleId);
+      sqlite.prepare('DELETE FROM recurring_schedules WHERE id = ?').run(scheduleId);
+    })();
 
     return NextResponse.json({ ok: true, deleted: scheduleId });
   } catch (error) {

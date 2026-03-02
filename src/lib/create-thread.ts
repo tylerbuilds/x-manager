@@ -205,7 +205,7 @@ function extractQuoteCandidates(html: string, paragraphs: string[], maxQuotes: n
 }
 
 export async function fetchAndExtractArticle(articleUrl: string, _maxRedirects = 5): Promise<ExtractedArticle> {
-  assertPublicUrl(articleUrl);
+  await assertPublicUrl(articleUrl);
 
   const response = await fetch(articleUrl, {
     redirect: 'manual',
@@ -221,7 +221,7 @@ export async function fetchAndExtractArticle(articleUrl: string, _maxRedirects =
     const location = response.headers.get('location');
     if (!location) throw new Error('Redirect with no Location header.');
     const resolved = new URL(location, articleUrl).href;
-    assertPublicUrl(resolved);
+    await assertPublicUrl(resolved);
     return fetchAndExtractArticle(resolved, _maxRedirects - 1);
   }
 
@@ -294,7 +294,7 @@ export async function downloadRemoteImages(imageUrls: string[], maxCount: number
     if (saved.length >= maxCount) break;
 
     try {
-      assertPublicUrl(imageUrl);
+      await assertPublicUrl(imageUrl);
 
       const response = await fetch(imageUrl, {
         redirect: 'manual',
@@ -309,7 +309,7 @@ export async function downloadRemoteImages(imageUrls: string[], maxCount: number
         const location = response.headers.get('location');
         if (!location) continue;
         const resolved = new URL(location, imageUrl).href;
-        assertPublicUrl(resolved);
+        await assertPublicUrl(resolved);
         // Re-fetch from the validated redirect target.
         const redirected = await fetch(resolved, {
           redirect: 'manual',

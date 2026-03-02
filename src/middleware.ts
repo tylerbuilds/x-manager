@@ -18,14 +18,17 @@ type RateBucket = { minute: number; count: number };
 const globalRateBuckets = new Map<string, RateBucket>();
 
 function getClientIpFromRequest(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) {
-    const ip = forwarded.split(',')[0]?.trim();
-    if (ip) return ip;
+  // H6 fix: Only trust proxy headers when explicitly configured
+  if (process.env.TRUST_PROXY === 'true') {
+    const forwarded = req.headers.get('x-forwarded-for');
+    if (forwarded) {
+      const ip = forwarded.split(',')[0]?.trim();
+      if (ip) return ip;
+    }
+    const realIp = req.headers.get('x-real-ip');
+    if (realIp) return realIp.trim();
   }
-  const realIp = req.headers.get('x-real-ip');
-  if (realIp) return realIp.trim();
-  return 'local';
+  return (req as NextRequest & { ip?: string }).ip || 'local';
 }
 
 function checkGlobalRate(req: NextRequest): { ok: boolean; retryAfter: number } {
@@ -87,13 +90,27 @@ function isAuthRequired(): boolean {
   const explicit = stableTrim(process.env.X_MANAGER_REQUIRE_AUTH).toLowerCase();
   if (explicit === 'true') return true;
   if (explicit === 'false') return false;
+  // H2 fix: In production, default to requiring auth even without a token.
+  // This prevents accidentally running wide-open in production.
+  if (process.env.NODE_ENV === 'production') return true;
   return getAdminToken().length > 0;
 }
 
-function getSessionSecret(): string {
-  return stableTrim(process.env.X_MANAGER_SESSION_SECRET)
-    || stableTrim(process.env.X_MANAGER_ENCRYPTION_KEY)
+// H3 fix: Derive session secret via HMAC so it's cryptographically distinct from the admin token.
+// This prevents Bearer token holders from trivially forging session cookies.
+let _derivedSessionSecret: string | null = null;
+async function getSessionSecret(): Promise<string> {
+  const explicit = stableTrim(process.env.X_MANAGER_SESSION_SECRET);
+  if (explicit) return explicit;
+
+  const baseKey = stableTrim(process.env.X_MANAGER_ENCRYPTION_KEY)
     || stableTrim(process.env.X_MANAGER_ADMIN_TOKEN);
+  if (!baseKey) return '';
+
+  if (!_derivedSessionSecret) {
+    _derivedSessionSecret = await hmacSha256Hex(baseKey, 'x-manager:session-signing-key:v1');
+  }
+  return _derivedSessionSecret;
 }
 
 function constantTimeEqual(a: string, b: string): boolean {
@@ -148,7 +165,7 @@ async function verifySessionValue(raw: string, adminToken: string): Promise<bool
   const [payload, signature] = raw.split('.');
   if (!payload || !signature) return false;
 
-  const secret = getSessionSecret();
+  const secret = await getSessionSecret();
   if (!secret) return false;
 
   const expectedSignature = await hmacSha256Hex(secret, payload);

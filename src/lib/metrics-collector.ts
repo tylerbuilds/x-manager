@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import nodeCrypto from 'crypto';
 import { and, eq, gte, isNotNull, desc } from 'drizzle-orm';
 import { db, sqlite } from './db';
 import { scheduledPosts, postMetrics, xAccounts } from './db/schema';
@@ -19,7 +19,7 @@ const defaultLogger: MetricsLogger = {
   error: (...args) => console.error('[metrics-collector]', ...args),
 };
 
-const metricsOwnerId = `${process.pid}-${crypto.randomUUID().slice(0, 8)}`;
+const metricsOwnerId = `${process.pid}-${nodeCrypto.randomUUID().slice(0, 8)}`;
 const metricsLockKey = 'metrics-collector';
 
 let runningTimer: NodeJS.Timeout | null = null;
@@ -33,6 +33,7 @@ async function getConnectedAccounts() {
 
 async function getPostedTweets() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // S1 fix: Limit to 200 most recent to prevent unbounded fetch as post count grows
   return db
     .select({
       id: scheduledPosts.id,
@@ -46,7 +47,9 @@ async function getPostedTweets() {
         isNotNull(scheduledPosts.twitterPostId),
         gte(scheduledPosts.scheduledTime, thirtyDaysAgo),
       ),
-    );
+    )
+    .orderBy(desc(scheduledPosts.scheduledTime))
+    .limit(200);
 }
 
 export async function fetchTweetMetrics(
@@ -58,13 +61,13 @@ export async function fetchTweetMetrics(
   if (ids.length === 0) return {};
 
   const OAuth = (await import('oauth-1.0a')).default;
-  const CryptoJS = (await import('crypto-js')).default;
 
+  // S13 fix: Use Node crypto instead of unmaintained crypto-js
   const oauth = new OAuth({
     consumer: { key: config.xApiKey, secret: config.xApiSecret },
     signature_method: 'HMAC-SHA1',
     hash_function(base_string: string, key: string) {
-      return CryptoJS.HmacSHA1(base_string, key).toString(CryptoJS.enc.Base64);
+      return nodeCrypto.createHmac('sha1', key).update(base_string).digest('base64');
     },
   });
 

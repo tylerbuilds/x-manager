@@ -2,28 +2,35 @@ import crypto from 'crypto';
 
 const ENCRYPTED_PREFIX = 'enc:v1:';
 
+// H4 fix: Use PBKDF2 with 100k iterations instead of single SHA-256 for key derivation
+function deriveKeyPbkdf2(input: string, salt: string): Buffer {
+  return crypto.pbkdf2Sync(input, salt, 100_000, 32, 'sha256');
+}
+
 function deriveKeyFromConfig(): Buffer | null {
   const configured = (process.env.X_MANAGER_ENCRYPTION_KEY || '').trim();
   if (configured) {
+    // Direct 32-byte hex key — no derivation needed
     if (/^[A-Fa-f0-9]{64}$/.test(configured)) {
       return Buffer.from(configured, 'hex');
     }
 
+    // Direct 32-byte base64 key
     try {
       const decoded = Buffer.from(configured, 'base64');
       if (decoded.length === 32) {
         return decoded;
       }
     } catch {
-      // Fall through to hash-based derivation.
+      // Fall through to PBKDF2 derivation.
     }
 
-    return crypto.createHash('sha256').update(configured).digest();
+    return deriveKeyPbkdf2(configured, 'x-manager:encryption-key:v2');
   }
 
   const adminToken = (process.env.X_MANAGER_ADMIN_TOKEN || '').trim();
   if (adminToken) {
-    return crypto.createHash('sha256').update(`x-manager|admin-token|${adminToken}`).digest();
+    return deriveKeyPbkdf2(adminToken, 'x-manager:admin-token-derived:v2');
   }
 
   if (process.env.NODE_ENV === 'production') {
@@ -39,7 +46,7 @@ function deriveKeyFromConfig(): Buffer | null {
   try {
     const existing = fs.readFileSync(keyPath, 'utf8').trim();
     if (existing.length >= 32) {
-      return crypto.createHash('sha256').update(existing).digest();
+      return deriveKeyPbkdf2(existing, 'x-manager:dev-key:v2');
     }
   } catch {
     // Key file doesn't exist yet -- generate one.
@@ -79,7 +86,7 @@ function deriveKeyFromConfig(): Buffer | null {
     const randomKey = crypto.randomBytes(32).toString('hex');
     fs.writeFileSync(keyPath, randomKey, { mode: 0o600 });
     console.warn('[crypto-store] Generated new dev encryption key at var/.dev-encryption-key');
-    return crypto.createHash('sha256').update(randomKey).digest();
+    return deriveKeyPbkdf2(randomKey, 'x-manager:dev-key:v2');
   } catch (err) {
     console.warn('[crypto-store] Could not persist dev encryption key, using ephemeral key:', err);
     return crypto.randomBytes(32);

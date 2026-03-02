@@ -1,5 +1,5 @@
 import { and, asc, eq, lte, sql } from 'drizzle-orm';
-import { db } from './db';
+import { db, sqlite } from './db';
 import { recurringSchedules, contentPool, scheduledPosts, mediaLibrary } from './db/schema';
 
 export type Frequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom_cron';
@@ -20,24 +20,37 @@ export function isValidCronExpression(expr: string): boolean {
 
 /**
  * Compute the next run time for a recurring schedule.
+ * Snaps to the original time-of-day from `anchor` (the previous nextRunAt) to prevent drift.
  * For custom_cron, supports HH:MM daily pattern only.
  */
-export function computeNextRunAt(frequency: Frequency, cronExpression?: string | null): Date {
+export function computeNextRunAt(frequency: Frequency, cronExpression?: string | null, anchor?: Date | null): Date {
   const now = new Date();
+  const base = anchor ?? now;
 
   switch (frequency) {
-    case 'daily':
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    case 'daily': {
+      const next = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+      // If we missed cycles, advance to the next future slot at the same time-of-day
+      while (next <= now) next.setDate(next.getDate() + 1);
+      return next;
+    }
 
-    case 'weekly':
-      return new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    case 'weekly': {
+      const next = new Date(base.getTime() + 7 * 24 * 60 * 60 * 1000);
+      while (next <= now) next.setDate(next.getDate() + 7);
+      return next;
+    }
 
-    case 'biweekly':
-      return new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
+    case 'biweekly': {
+      const next = new Date(base.getTime() + 14 * 24 * 60 * 60 * 1000);
+      while (next <= now) next.setDate(next.getDate() + 14);
+      return next;
+    }
 
     case 'monthly': {
-      const next = new Date(now);
+      const next = new Date(base);
       next.setMonth(next.getMonth() + 1);
+      while (next <= now) next.setMonth(next.getMonth() + 1);
       return next;
     }
 
@@ -53,12 +66,16 @@ export function computeNextRunAt(frequency: Frequency, cronExpression?: string |
           return next;
         }
       }
-      // Fallback: 24h from now
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const next = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+      while (next <= now) next.setDate(next.getDate() + 1);
+      return next;
     }
 
-    default:
-      return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    default: {
+      const next = new Date(base.getTime() + 24 * 60 * 60 * 1000);
+      while (next <= now) next.setDate(next.getDate() + 1);
+      return next;
+    }
   }
 }
 
@@ -128,25 +145,6 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
         continue;
       }
 
-      // OPTIMISTIC ADVANCE: Update nextRunAt + timesRun FIRST to prevent duplicate processing
-      const nextRunAt = computeNextRunAt(schedule.frequency as Frequency, schedule.cronExpression);
-      const newTimesRun = schedule.timesRun + 1;
-      const newStatus = schedule.maxRuns !== null && newTimesRun >= schedule.maxRuns ? 'exhausted' : 'active';
-
-      await db.update(recurringSchedules).set({
-        nextRunAt,
-        lastRunAt: now,
-        timesRun: newTimesRun,
-        status: newStatus as 'active' | 'paused' | 'exhausted',
-        updatedAt: new Date(),
-      }).where(
-        and(
-          eq(recurringSchedules.id, schedule.id),
-          // Optimistic lock: only update if nextRunAt hasn't changed (prevents double-processing)
-          eq(recurringSchedules.timesRun, schedule.timesRun),
-        ),
-      );
-
       // Determine content: from content pool (round-robin by used_count) or from schedule itself
       let postText: string | null = null;
       let postMediaIds: number[] = [];
@@ -180,24 +178,62 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
       // Schedule the post 5 minutes from now
       const scheduledTime = new Date(now.getTime() + 5 * 60 * 1000);
 
-      await db.insert(scheduledPosts).values({
-        accountSlot: schedule.accountSlot,
-        text: postText,
-        mediaUrls: mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
-        communityId: schedule.communityId,
-        scheduledTime,
-      });
+      // Snap next run to original time-of-day (S6 fix: prevents drift)
+      const nextRunAt = computeNextRunAt(schedule.frequency as Frequency, schedule.cronExpression, schedule.nextRunAt);
+      const newTimesRun = schedule.timesRun + 1;
+      const newStatus = schedule.maxRuns !== null && newTimesRun >= schedule.maxRuns ? 'exhausted' : 'active';
 
-      created++;
+      // C3/S7 fix: Wrap advance + insert in a transaction.
+      // Check affected rows from optimistic update to prevent double-processing.
+      const txResult = sqlite.transaction(() => {
+        const updateResult = sqlite
+          .prepare(
+            `UPDATE recurring_schedules
+             SET next_run_at = ?, last_run_at = ?, times_run = ?, status = ?, updated_at = ?
+             WHERE id = ? AND times_run = ?`,
+          )
+          .run(
+            nextRunAt.toISOString(),
+            now.toISOString(),
+            newTimesRun,
+            newStatus,
+            new Date().toISOString(),
+            schedule.id,
+            schedule.timesRun,
+          );
 
-      // Update pool item used_count atomically
-      if (poolItemId !== null) {
-        await db.update(contentPool).set({
-          usedCount: sql`${contentPool.usedCount} + 1`,
-          lastUsedAt: now,
-        }).where(eq(contentPool.id, poolItemId));
+        if (updateResult.changes === 0) {
+          // Another instance already processed this schedule
+          return { skipped: true } as const;
+        }
+
+        sqlite
+          .prepare(
+            `INSERT INTO scheduled_posts (account_slot, text, media_urls, community_id, scheduled_time)
+             VALUES (?, ?, ?, ?, ?)`,
+          )
+          .run(
+            schedule.accountSlot,
+            postText,
+            mediaUrls.length > 0 ? JSON.stringify(mediaUrls) : null,
+            schedule.communityId,
+            scheduledTime.toISOString(),
+          );
+
+        if (poolItemId !== null) {
+          sqlite
+            .prepare(`UPDATE content_pool SET used_count = used_count + 1, last_used_at = ? WHERE id = ?`)
+            .run(now.toISOString(), poolItemId);
+        }
+
+        return { skipped: false } as const;
+      })();
+
+      if (txResult.skipped) {
+        continue;
       }
 
+      created++;
       processed++;
     } catch (error) {
       console.error(`[recurring] Error processing schedule ${schedule.id}:`, error);

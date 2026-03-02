@@ -84,25 +84,42 @@ export async function runFeedProcessor(logger: Logger): Promise<void> {
     }
 
     try {
-      assertPublicUrl(feed.url);
+      await assertPublicUrl(feed.url);
+      // S2 fix: Add 30s timeout to prevent hanging feeds from blocking the cycle
       const response = await fetch(feed.url, {
         cache: 'no-store',
         headers: { 'User-Agent': 'x-manager/0.1 feed-processor' },
+        signal: AbortSignal.timeout(30_000),
       });
 
       if (!response.ok) {
         throw new Error(`Feed fetch failed with status ${response.status}.`);
       }
 
-      const contentLength = Number(response.headers.get('content-length') || 0);
       const MAX_FEED_SIZE = 2 * 1024 * 1024; // 2MB
+      const contentLength = Number(response.headers.get('content-length') || 0);
       if (contentLength > MAX_FEED_SIZE) {
         throw new Error(`Feed response too large (${contentLength} bytes, max ${MAX_FEED_SIZE}).`);
       }
-      const xml = await response.text();
-      if (xml.length > MAX_FEED_SIZE) {
-        throw new Error(`Feed body too large (${xml.length} chars, max ${MAX_FEED_SIZE}).`);
+
+      // S3 fix: Stream body with byte limit to prevent Content-Length bypass via chunked encoding
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Feed response has no body.');
       }
+      const chunks: Uint8Array[] = [];
+      let totalBytes = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        totalBytes += value.byteLength;
+        if (totalBytes > MAX_FEED_SIZE) {
+          reader.cancel();
+          throw new Error(`Feed body too large (>${MAX_FEED_SIZE} bytes streamed).`);
+        }
+        chunks.push(value);
+      }
+      const xml = new TextDecoder().decode(Buffer.concat(chunks));
       const entries = parseFeed(xml);
       let newestEntryId = feed.lastEntryId;
 

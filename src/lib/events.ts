@@ -25,8 +25,10 @@ export interface EmitEventOptions {
   accountSlot?: number;
 }
 
-const MAX_LISTENERS = 100;
-const listeners = new Set<(event: EmitEventOptions & { id: number; createdAt: number }) => void>();
+const MAX_SSE_LISTENERS = 100;
+type EventListener = (event: EmitEventOptions & { id: number; createdAt: number }) => void;
+const sseListeners = new Set<EventListener>();
+const internalListeners = new Set<EventListener>();
 
 /**
  * Emit an event: persist to DB and notify in-process SSE listeners.
@@ -50,11 +52,18 @@ export function emitEvent(options: EmitEventOptions): number {
   const createdAt = Math.floor(Date.now() / 1000);
   const fullEvent = { ...options, id, createdAt };
 
-  for (const listener of listeners) {
+  for (const listener of internalListeners) {
     try {
       listener(fullEvent);
     } catch {
-      // Don't let a broken listener crash the emitter.
+      // Don't let a broken internal listener crash the emitter.
+    }
+  }
+  for (const listener of sseListeners) {
+    try {
+      listener(fullEvent);
+    } catch {
+      // Don't let a broken SSE listener crash the emitter.
     }
   }
 
@@ -62,20 +71,29 @@ export function emitEvent(options: EmitEventOptions): number {
 }
 
 /**
+ * Register an internal listener (automation, webhooks) that is NEVER evicted.
+ * Use this for system-critical consumers.
+ */
+export function onEventInternal(listener: EventListener): () => void {
+  internalListeners.add(listener);
+  return () => {
+    internalListeners.delete(listener);
+  };
+}
+
+/**
  * Register a listener for real-time SSE streaming.
+ * Evicts oldest SSE listener when the cap is reached — internal listeners are never affected.
  * Returns an unsubscribe function.
  */
-export function onEvent(
-  listener: (event: EmitEventOptions & { id: number; createdAt: number }) => void,
-): () => void {
-  if (listeners.size >= MAX_LISTENERS) {
-    // Evict oldest listener to prevent unbounded growth
-    const oldest = listeners.values().next().value;
-    if (oldest) listeners.delete(oldest);
+export function onEvent(listener: EventListener): () => void {
+  if (sseListeners.size >= MAX_SSE_LISTENERS) {
+    const oldest = sseListeners.values().next().value;
+    if (oldest) sseListeners.delete(oldest);
   }
-  listeners.add(listener);
+  sseListeners.add(listener);
   return () => {
-    listeners.delete(listener);
+    sseListeners.delete(listener);
   };
 }
 
