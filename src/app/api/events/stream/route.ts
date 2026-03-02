@@ -8,7 +8,6 @@ export async function GET(req: Request) {
   const eventTypeFilter = url.searchParams.get('event_type') || null;
 
   const encoder = new TextEncoder();
-  let unsubscribe: (() => void) | null = null;
 
   const stream = new ReadableStream({
     start(controller) {
@@ -24,8 +23,8 @@ export async function GET(req: Request) {
         }
       }, 30_000);
 
-      // Listen for new events
-      unsubscribe = onEvent((event) => {
+      // Subscribe FIRST — capture unsubscribe synchronously before abort can fire
+      const unsubscribe = onEvent((event) => {
         if (eventTypeFilter && event.eventType !== eventTypeFilter) return;
 
         try {
@@ -38,27 +37,34 @@ export async function GET(req: Request) {
             payload: event.payload ?? null,
             createdAt: new Date(event.createdAt * 1000).toISOString(),
           });
-          controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          controller.enqueue(encoder.encode(`id: ${event.id}\ndata: ${data}\n\n`));
         } catch {
           // Client disconnected
           clearInterval(keepAlive);
-          if (unsubscribe) unsubscribe();
+          unsubscribe();
         }
       });
 
-      // Handle abort (client disconnect)
-      req.signal.addEventListener('abort', () => {
+      // Cleanup function shared by abort + cancel
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
         clearInterval(keepAlive);
-        if (unsubscribe) unsubscribe();
-        try {
-          controller.close();
-        } catch {
-          // Already closed
-        }
-      });
+        unsubscribe();
+        try { controller.close(); } catch { /* already closed */ }
+      };
+
+      // Handle abort (client disconnect)
+      req.signal.addEventListener('abort', cleanup);
+
+      // Also handle cancel
+      // Store cleanup ref on controller for the cancel() callback
+      (controller as unknown as { _cleanup: () => void })._cleanup = cleanup;
     },
-    cancel() {
-      if (unsubscribe) unsubscribe();
+    cancel(controller) {
+      const ctrl = controller as unknown as { _cleanup?: () => void };
+      if (ctrl?._cleanup) ctrl._cleanup();
     },
   });
 

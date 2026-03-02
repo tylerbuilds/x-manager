@@ -13,6 +13,22 @@ export const dynamic = 'force-dynamic';
 
 const MEDIA_DIR = path.join(process.cwd(), 'public', 'uploads', 'library');
 
+const ALLOWED_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'video/mp4', 'video/quicktime', 'video/webm',
+  'audio/mpeg', 'audio/wav', 'audio/ogg',
+]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg',
+  '.mp4', '.mov', '.webm',
+  '.mp3', '.wav', '.ogg',
+]);
+
+function escapeLikePattern(pattern: string): string {
+  return pattern.replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
@@ -23,16 +39,15 @@ export async function GET(req: Request) {
     const conditions: SQL[] = [];
 
     if (search) {
-      conditions.push(like(mediaLibrary.originalName, `%${search}%`));
+      conditions.push(like(mediaLibrary.originalName, `%${escapeLikePattern(search)}%`));
     }
 
     if (mimeFilter) {
-      conditions.push(like(mediaLibrary.mimeType, `${mimeFilter}%`));
+      conditions.push(like(mediaLibrary.mimeType, `${escapeLikePattern(mimeFilter)}%`));
     }
 
     if (tagFilter) {
-      // JSON array stored as text — use LIKE for tag matching
-      conditions.push(like(mediaLibrary.tags, `%"${tagFilter}"%`));
+      conditions.push(like(mediaLibrary.tags, `%"${escapeLikePattern(tagFilter)}"%`));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -92,14 +107,31 @@ export async function POST(req: Request) {
 
     const results = [];
     for (const file of files) {
-      if (typeof file.size === 'number' && file.size > MAX_UPLOAD_BYTES) {
+      // Validate mime type from extension (don't trust client-provided file.type)
+      const ext = path.extname(file.name || '').toLowerCase();
+      if (!ALLOWED_EXTENSIONS.has(ext)) {
+        return NextResponse.json(
+          { error: `File type "${ext}" not allowed. Allowed: ${[...ALLOWED_EXTENSIONS].join(', ')}` },
+          { status: 400 },
+        );
+      }
+
+      const clientMime = (file.type || 'application/octet-stream').toLowerCase();
+      if (!ALLOWED_MIME_TYPES.has(clientMime) && clientMime !== 'application/octet-stream') {
+        return NextResponse.json(
+          { error: `MIME type "${clientMime}" not allowed.` },
+          { status: 400 },
+        );
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      if (buffer.length > MAX_UPLOAD_BYTES) {
         return NextResponse.json(
           { error: `File "${file.name}" too large. Max ${MAX_UPLOAD_BYTES} bytes.` },
           { status: 400 },
         );
       }
 
-      const buffer = Buffer.from(await file.arrayBuffer());
       const safeName = sanitizeUploadFilename(file.name || `upload-${crypto.randomUUID()}`);
       const filename = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}-${safeName}`;
       await fs.writeFile(path.join(MEDIA_DIR, filename), buffer);
@@ -107,7 +139,7 @@ export async function POST(req: Request) {
       const inserted = await db.insert(mediaLibrary).values({
         filename,
         originalName: file.name || safeName,
-        mimeType: file.type || 'application/octet-stream',
+        mimeType: clientMime,
         sizeBytes: buffer.length,
         tags: tags.length > 0 ? JSON.stringify(tags) : null,
         description,

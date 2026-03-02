@@ -29,28 +29,27 @@ export async function POST(
       return NextResponse.json({ error: 'Webhook not found.' }, { status: 404 });
     }
 
-    // Emit a test event
+    // Emit a test event (use system.error since webhook_test isn't a distinct event type,
+    // but mark it clearly in entityType + payload so it's distinguishable)
+    const testPayload = {
+      test: true,
+      message: 'This is a test event to verify webhook delivery.',
+      webhookId,
+    };
+
     const eventId = emitEvent({
       eventType: 'system.error',
       entityType: 'webhook_test',
       entityId: webhookId,
-      payload: {
-        test: true,
-        message: 'This is a test event to verify webhook delivery.',
-        webhookId,
-      },
+      payload: testPayload,
     });
 
-    // Deliver to this specific webhook
+    // Deliver to this specific webhook only
     deliverEventToWebhooks(eventId, {
       eventType: 'system.error',
       entityType: 'webhook_test',
       entityId: webhookId,
-      payload: {
-        test: true,
-        message: 'This is a test event to verify webhook delivery.',
-        webhookId,
-      },
+      payload: testPayload,
     });
 
     return NextResponse.json({

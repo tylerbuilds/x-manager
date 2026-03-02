@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 
-import { db } from '@/lib/db';
+import { db, sqlite } from '@/lib/db';
 import { recurringSchedules, contentPool } from '@/lib/db/schema';
 import { computeNextRunAt, type Frequency } from '@/lib/recurring-processor';
 
@@ -122,9 +122,16 @@ export async function DELETE(
       return NextResponse.json({ error: 'Recurring schedule not found.' }, { status: 404 });
     }
 
-    // Delete associated content pool items
-    await db.delete(contentPool).where(eq(contentPool.recurringScheduleId, scheduleId));
-    await db.delete(recurringSchedules).where(eq(recurringSchedules.id, scheduleId));
+    // Delete schedule + pool atomically
+    sqlite.exec('BEGIN');
+    try {
+      await db.delete(contentPool).where(eq(contentPool.recurringScheduleId, scheduleId));
+      await db.delete(recurringSchedules).where(eq(recurringSchedules.id, scheduleId));
+      sqlite.exec('COMMIT');
+    } catch (e) {
+      sqlite.exec('ROLLBACK');
+      throw e;
+    }
 
     return NextResponse.json({ ok: true, deleted: scheduleId });
   } catch (error) {

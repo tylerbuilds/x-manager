@@ -45,8 +45,19 @@ export function registerNodeInstrumentation(): void {
     console.log('[instrumentation] Action scheduler started (30s interval).');
   });
 
+  void startWithRetry('Automation event listener', async () => {
+    const { startAutomationEventListener } = await import('./lib/automation-executor');
+    startAutomationEventListener();
+    console.log('[instrumentation] Automation event listener started.');
+  });
+
   void startWithRetry('Recurring processor', async () => {
-    const { processRecurringSchedules } = await import('./lib/recurring-processor');
+    const { processRecurringSchedules, isRecurringProcessorStarted, markRecurringProcessorStarted } = await import('./lib/recurring-processor');
+    if (isRecurringProcessorStarted()) {
+      console.log('[instrumentation] Recurring processor already running, skipping.');
+      return;
+    }
+    markRecurringProcessorStarted();
     const intervalMs = Math.max(60, Number(process.env.RECURRING_INTERVAL_SECONDS) || 300) * 1000;
     setInterval(async () => {
       try {

@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const url = new URL(req.url);
-    const olderThanDays = Number(url.searchParams.get('older_than_days') || 30);
+    const olderThanDays = Math.max(1, Number(url.searchParams.get('older_than_days') || 30));
     const cutoff = Math.floor(Date.now() / 1000) - olderThanDays * 86400;
 
     const result = sqlite

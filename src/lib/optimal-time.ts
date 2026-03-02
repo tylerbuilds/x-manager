@@ -16,8 +16,8 @@ interface HeatmapEntry {
  */
 export function suggestOptimalTime(accountSlot: number, days = 90): Date {
   const params: unknown[] = [days];
-  const slotFilter = accountSlot ? 'AND sp.account_slot = ?' : '';
-  if (accountSlot) params.push(accountSlot);
+  const slotFilter = accountSlot != null ? 'AND sp.account_slot = ?' : '';
+  if (accountSlot != null) params.push(accountSlot);
 
   // Get engagement by day-of-week + hour
   const rows = sqlite
@@ -114,8 +114,8 @@ export function suggestMultipleOptimalTimes(
   days = 90,
 ): Array<{ time: Date; dayOfWeek: number; hour: number; avgEngagement: number }> {
   const params: unknown[] = [days];
-  const slotFilter = accountSlot ? 'AND sp.account_slot = ?' : '';
-  if (accountSlot) params.push(accountSlot);
+  const slotFilter = accountSlot != null ? 'AND sp.account_slot = ?' : '';
+  if (accountSlot != null) params.push(accountSlot);
 
   const rows = sqlite
     .prepare(

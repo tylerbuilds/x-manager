@@ -4,7 +4,7 @@ import { and, count, desc, eq, type SQL } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { recurringSchedules, contentPool } from '@/lib/db/schema';
 import { isAccountSlot, parseAccountSlot } from '@/lib/account-slots';
-import { computeNextRunAt, type Frequency } from '@/lib/recurring-processor';
+import { computeNextRunAt, isValidCronExpression, type Frequency } from '@/lib/recurring-processor';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -74,8 +74,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `Invalid frequency. Use: ${VALID_FREQUENCIES.join(', ')}` }, { status: 400 });
     }
 
-    if (frequency === 'custom_cron' && !body.cron_expression) {
-      return NextResponse.json({ error: 'cron_expression required for custom_cron frequency.' }, { status: 400 });
+    if (frequency === 'custom_cron') {
+      if (!body.cron_expression) {
+        return NextResponse.json({ error: 'cron_expression required for custom_cron frequency. Use HH:MM format (e.g. "09:30").' }, { status: 400 });
+      }
+      if (!isValidCronExpression(String(body.cron_expression).trim())) {
+        return NextResponse.json({ error: 'Invalid cron_expression. Only HH:MM daily time format is supported (e.g. "09:30", "14:00"). Full cron syntax is not yet supported.' }, { status: 400 });
+      }
     }
 
     const rawSlot = body.account_slot ?? body.accountSlot;

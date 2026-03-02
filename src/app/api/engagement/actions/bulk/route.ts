@@ -45,6 +45,12 @@ export async function POST(req: Request) {
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
+
+      // Small delay between Twitter API calls to avoid rate limiting (skip for first item and dismiss)
+      if (i > 0 && item.action !== 'dismiss') {
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
       try {
         const accountSlot = parseAccountSlot(item.account_slot ?? 1);
         const account = await requireConnectedAccount(accountSlot);

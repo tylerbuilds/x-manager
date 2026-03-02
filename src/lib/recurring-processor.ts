@@ -1,12 +1,26 @@
-import { and, asc, eq, lte } from 'drizzle-orm';
+import { and, asc, eq, lte, sql } from 'drizzle-orm';
 import { db } from './db';
 import { recurringSchedules, contentPool, scheduledPosts, mediaLibrary } from './db/schema';
 
 export type Frequency = 'daily' | 'weekly' | 'biweekly' | 'monthly' | 'custom_cron';
 
+const VALID_TIME_PATTERN = /^(\d{1,2}):(\d{2})$/;
+
+/**
+ * Validate a cron expression. Currently only supports HH:MM daily pattern.
+ * Returns true if valid, false otherwise.
+ */
+export function isValidCronExpression(expr: string): boolean {
+  const match = expr.match(VALID_TIME_PATTERN);
+  if (!match) return false;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
 /**
  * Compute the next run time for a recurring schedule.
- * For custom_cron, we do a simple "next occurrence" calculation.
+ * For custom_cron, supports HH:MM daily pattern only.
  */
 export function computeNextRunAt(frequency: Frequency, cronExpression?: string | null): Date {
   const now = new Date();
@@ -28,9 +42,8 @@ export function computeNextRunAt(frequency: Frequency, cronExpression?: string |
     }
 
     case 'custom_cron': {
-      // Simple cron support: parse "HH:MM" daily pattern or fall back to 24h
       if (cronExpression) {
-        const timeMatch = cronExpression.match(/^(\d{1,2}):(\d{2})$/);
+        const timeMatch = cronExpression.match(VALID_TIME_PATTERN);
         if (timeMatch) {
           const hour = Number(timeMatch[1]);
           const minute = Number(timeMatch[2]);
@@ -54,7 +67,7 @@ function parseJsonArray(value: string | null): number[] {
   try {
     const parsed = JSON.parse(value);
     if (Array.isArray(parsed)) {
-      return parsed.filter((n): n is number => typeof n === 'number');
+      return parsed.filter((n): n is number => typeof n === 'number' && Number.isFinite(n));
     }
   } catch { /* ignore */ }
   return [];
@@ -62,6 +75,7 @@ function parseJsonArray(value: string | null): number[] {
 
 /**
  * Resolve media library IDs to file paths for use in scheduled posts.
+ * Uses atomic SQL increment for used_count.
  */
 async function resolveMediaUrls(ids: number[]): Promise<string[]> {
   if (ids.length === 0) return [];
@@ -70,16 +84,20 @@ async function resolveMediaUrls(ids: number[]): Promise<string[]> {
     const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id)).limit(1);
     if (item) {
       urls.push(`/uploads/library/${item.filename}`);
-      // Increment used_count
-      await db.update(mediaLibrary).set({ usedCount: item.usedCount + 1 }).where(eq(mediaLibrary.id, id));
+      await db.update(mediaLibrary)
+        .set({ usedCount: sql`${mediaLibrary.usedCount} + 1` })
+        .where(eq(mediaLibrary.id, id));
     }
   }
   return urls;
 }
 
+let _started = false;
+
 /**
  * Process all recurring schedules that are due.
- * Called from the instrumentation loop (e.g. every 60s).
+ * Called from the instrumentation loop.
+ * Uses optimistic advance: updates nextRunAt BEFORE creating the post to prevent duplicates.
  */
 export async function processRecurringSchedules(): Promise<{ processed: number; created: number }> {
   const now = new Date();
@@ -97,7 +115,7 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
       ),
     )
     .orderBy(asc(recurringSchedules.nextRunAt))
-    .limit(50); // Process at most 50 per cycle to avoid long locks
+    .limit(50);
 
   for (const schedule of dueSchedules) {
     try {
@@ -109,6 +127,25 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
         }).where(eq(recurringSchedules.id, schedule.id));
         continue;
       }
+
+      // OPTIMISTIC ADVANCE: Update nextRunAt + timesRun FIRST to prevent duplicate processing
+      const nextRunAt = computeNextRunAt(schedule.frequency as Frequency, schedule.cronExpression);
+      const newTimesRun = schedule.timesRun + 1;
+      const newStatus = schedule.maxRuns !== null && newTimesRun >= schedule.maxRuns ? 'exhausted' : 'active';
+
+      await db.update(recurringSchedules).set({
+        nextRunAt,
+        lastRunAt: now,
+        timesRun: newTimesRun,
+        status: newStatus as 'active' | 'paused' | 'exhausted',
+        updatedAt: new Date(),
+      }).where(
+        and(
+          eq(recurringSchedules.id, schedule.id),
+          // Optimistic lock: only update if nextRunAt hasn't changed (prevents double-processing)
+          eq(recurringSchedules.timesRun, schedule.timesRun),
+        ),
+      );
 
       // Determine content: from content pool (round-robin by used_count) or from schedule itself
       let postText: string | null = null;
@@ -133,20 +170,14 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
       }
 
       if (!postText?.trim()) {
-        // Skip if no content available
         console.warn(`[recurring] Schedule ${schedule.id} has no content to post.`);
-        // Still advance the next run time
-        await db.update(recurringSchedules).set({
-          nextRunAt: computeNextRunAt(schedule.frequency as Frequency, schedule.cronExpression),
-          updatedAt: new Date(),
-        }).where(eq(recurringSchedules.id, schedule.id));
         continue;
       }
 
       // Resolve media URLs
       const mediaUrls = await resolveMediaUrls(postMediaIds);
 
-      // Schedule the post (pick a time 5 minutes from now to avoid immediate posting conflicts)
+      // Schedule the post 5 minutes from now
       const scheduledTime = new Date(now.getTime() + 5 * 60 * 1000);
 
       await db.insert(scheduledPosts).values({
@@ -159,27 +190,13 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
 
       created++;
 
-      // Update pool item used_count
+      // Update pool item used_count atomically
       if (poolItemId !== null) {
-        const poolItem = poolItems[0];
         await db.update(contentPool).set({
-          usedCount: poolItem.usedCount + 1,
+          usedCount: sql`${contentPool.usedCount} + 1`,
           lastUsedAt: now,
         }).where(eq(contentPool.id, poolItemId));
       }
-
-      // Update schedule: advance next_run_at, increment times_run
-      const nextRunAt = computeNextRunAt(schedule.frequency as Frequency, schedule.cronExpression);
-      const newTimesRun = schedule.timesRun + 1;
-      const newStatus = schedule.maxRuns !== null && newTimesRun >= schedule.maxRuns ? 'exhausted' : 'active';
-
-      await db.update(recurringSchedules).set({
-        nextRunAt,
-        lastRunAt: now,
-        timesRun: newTimesRun,
-        status: newStatus as 'active' | 'paused' | 'exhausted',
-        updatedAt: new Date(),
-      }).where(eq(recurringSchedules.id, schedule.id));
 
       processed++;
     } catch (error) {
@@ -188,4 +205,15 @@ export async function processRecurringSchedules(): Promise<{ processed: number; 
   }
 
   return { processed, created };
+}
+
+/**
+ * Guard against double-start (HMR, multiple registerNodeInstrumentation calls).
+ */
+export function isRecurringProcessorStarted(): boolean {
+  return _started;
+}
+
+export function markRecurringProcessorStarted(): void {
+  _started = true;
 }

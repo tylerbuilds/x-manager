@@ -15,6 +15,14 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid webhook ID.' }, { status: 400 });
     }
 
+    // Verify webhook exists before returning deliveries
+    const webhookExists = sqlite
+      .prepare(`SELECT 1 FROM agent_webhooks WHERE id = ? LIMIT 1`)
+      .get(webhookId);
+    if (!webhookExists) {
+      return NextResponse.json({ error: 'Webhook not found.' }, { status: 404 });
+    }
+
     const url = new URL(req.url);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit')) || 50));
     const offset = Math.max(0, Number(url.searchParams.get('offset')) || 0);

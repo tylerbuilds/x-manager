@@ -11,6 +11,10 @@ export type EventType =
   | 'inbox.new_dm'
   | 'campaign.task_completed'
   | 'campaign.completed'
+  | 'feed.new_entry'
+  | 'keyword.match'
+  | 'automation.executed'
+  | 'automation.failed'
   | 'system.error';
 
 export interface EmitEventOptions {
@@ -21,6 +25,7 @@ export interface EmitEventOptions {
   accountSlot?: number;
 }
 
+const MAX_LISTENERS = 100;
 const listeners = new Set<(event: EmitEventOptions & { id: number; createdAt: number }) => void>();
 
 /**
@@ -63,6 +68,11 @@ export function emitEvent(options: EmitEventOptions): number {
 export function onEvent(
   listener: (event: EmitEventOptions & { id: number; createdAt: number }) => void,
 ): () => void {
+  if (listeners.size >= MAX_LISTENERS) {
+    // Evict oldest listener to prevent unbounded growth
+    const oldest = listeners.values().next().value;
+    if (oldest) listeners.delete(oldest);
+  }
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
@@ -98,7 +108,7 @@ export function queryEvents(options: {
     where.push('account_slot = ?');
     params.push(accountSlot);
   }
-  if (since) {
+  if (since != null) {
     where.push('created_at >= ?');
     params.push(since);
   }

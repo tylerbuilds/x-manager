@@ -7,7 +7,6 @@ import { and, count, desc, eq, gte, lte, like, type SQL } from 'drizzle-orm';
 import { db, sqlite } from '@/lib/db';
 import { scheduledPosts, mediaLibrary } from '@/lib/db/schema';
 import { isAccountSlot, parseAccountSlot, type AccountSlot } from '@/lib/account-slots';
-import { canonicalizeUrl, computeDedupeKey, extractFirstUrl, normalizeCopy } from '@/lib/scheduler-dedupe';
 import {
   ensureSafeUploadUrl,
   generateUploadFilename,
@@ -17,6 +16,7 @@ import {
 } from '@/lib/uploads';
 import { withIdempotency } from '@/lib/idempotency';
 import { suggestOptimalTime } from '@/lib/optimal-time';
+import { createScheduledPost } from '@/lib/post-scheduler';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -55,7 +55,8 @@ export async function GET(req: Request) {
     }
 
     if (search) {
-      conditions.push(like(scheduledPosts.text, `%${search}%`));
+      const escaped = search.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      conditions.push(like(scheduledPosts.text, `%${escaped}%`));
     }
 
     if (dateFrom) {
@@ -229,31 +230,6 @@ export async function POST(req: Request) {
       threadIndex = 0;
     }
 
-    const extractedUrl = sourceUrlRaw || extractFirstUrl(text);
-    const canonicalUrl = extractedUrl ? canonicalizeUrl(extractedUrl) : null;
-    const normalizedCopy = normalizeCopy(text);
-    const dedupeKey = canonicalUrl
-      ? computeDedupeKey({ accountSlot, canonicalUrl, normalizedCopy })
-      : null;
-
-    if (dedupeKey) {
-      const existing = await db
-        .select()
-        .from(scheduledPosts)
-        .where(
-          and(
-            eq(scheduledPosts.accountSlot, accountSlot),
-            eq(scheduledPosts.status, 'scheduled'),
-            eq(scheduledPosts.dedupeKey, dedupeKey),
-          ),
-        )
-        .limit(1);
-
-      if (existing.length > 0) {
-        return NextResponse.json({ ...existing[0], skipped: true });
-      }
-    }
-
     if (files.length > MAX_UPLOAD_FILES) {
       return NextResponse.json(
         { error: `Too many files. X supports up to ${MAX_UPLOAD_FILES} media attachments.` },
@@ -267,13 +243,18 @@ export async function POST(req: Request) {
     const mediaLibraryIdsRaw = (formData.get('media_library_ids') as string | null)?.trim() || null;
     if (mediaLibraryIdsRaw) {
       try {
-        const ids = JSON.parse(mediaLibraryIdsRaw) as number[];
-        if (Array.isArray(ids)) {
-          for (const id of ids) {
-            const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id)).limit(1);
-            if (item) {
-              mediaUrls.push(`/uploads/library/${item.filename}`);
-            }
+        const parsed = JSON.parse(mediaLibraryIdsRaw);
+        if (!Array.isArray(parsed)) {
+          return NextResponse.json({ error: 'Invalid media_library_ids. Provide a JSON array of IDs.' }, { status: 400 });
+        }
+        const ids = parsed.filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+        if (ids.length !== parsed.length) {
+          return NextResponse.json({ error: 'media_library_ids must contain only numeric IDs.' }, { status: 400 });
+        }
+        for (const id of ids) {
+          const [item] = await db.select().from(mediaLibrary).where(eq(mediaLibrary.id, id)).limit(1);
+          if (item) {
+            mediaUrls.push(`/uploads/library/${item.filename}`);
           }
         }
       } catch {
@@ -300,42 +281,20 @@ export async function POST(req: Request) {
       }
     }
 
-    const newPost = {
-      accountSlot,
-      text,
-      sourceUrl: canonicalUrl,
-      dedupeKey,
-      threadId,
-      threadIndex,
-      scheduledTime: scheduledAt,
-      communityId,
-      replyToTweetId,
-      mediaUrls: JSON.stringify(mediaUrls),
-    };
-
     try {
-      const inserted = await db.insert(scheduledPosts).values(newPost).returning();
-      return NextResponse.json(inserted[0]);
+      const result = await createScheduledPost({
+        accountSlot,
+        text,
+        sourceUrl: sourceUrlRaw,
+        threadId,
+        threadIndex,
+        scheduledTime: scheduledAt,
+        communityId,
+        replyToTweetId,
+        mediaUrls,
+      });
+      return NextResponse.json({ ...result.post, skipped: result.skipped });
     } catch (error) {
-      // If we race with another insert, the unique index can reject duplicates; return the existing row.
-      const message = error instanceof Error ? error.message : String(error);
-      if (dedupeKey && message.includes('SQLITE_CONSTRAINT')) {
-        const existing = await db
-          .select()
-          .from(scheduledPosts)
-          .where(
-            and(
-              eq(scheduledPosts.accountSlot, accountSlot),
-              eq(scheduledPosts.status, 'scheduled'),
-              eq(scheduledPosts.dedupeKey, dedupeKey),
-            ),
-          )
-          .limit(1);
-
-        if (existing.length > 0) {
-          return NextResponse.json({ ...existing[0], skipped: true });
-        }
-      }
       throw error;
     }
     } catch (error) {
