@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { engagementInbox } from '@/lib/db/schema';
 import { fetchMentionsTimeline, listDirectMessages } from '@/lib/twitter-api-client';
 import { parseAccountSlot, requireConnectedAccount } from '@/lib/engagement-ops';
+import { emitEvent } from '@/lib/events';
+import { deliverEventToWebhooks } from '@/lib/webhook-delivery';
 
 type SyncBody = {
   account_slot?: unknown;
@@ -34,6 +37,32 @@ function asString(value: unknown): string | null {
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+function emitInboxEvent(
+  eventType: 'inbox.new_mention' | 'inbox.new_dm',
+  inboxId: number,
+  accountSlot: number,
+  payload: Record<string, unknown>,
+): void {
+  try {
+    const eventId = emitEvent({
+      eventType,
+      entityType: 'inbox',
+      entityId: inboxId,
+      accountSlot,
+      payload,
+    });
+    deliverEventToWebhooks(eventId, {
+      eventType,
+      entityType: 'inbox',
+      entityId: inboxId,
+      accountSlot,
+      payload,
+    });
+  } catch {
+    // Sync should not fail because event fanout failed.
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -70,7 +99,17 @@ export async function POST(req: Request) {
       );
 
       for (const mention of mentions) {
-        await db
+        const existing = await db
+          .select()
+          .from(engagementInbox)
+          .where(and(
+            eq(engagementInbox.accountSlot, accountSlot),
+            eq(engagementInbox.sourceType, 'mention'),
+            eq(engagementInbox.sourceId, mention.sourceId),
+          ))
+          .limit(1);
+
+        const upserted = await db
           .insert(engagementInbox)
           .values({
             accountSlot,
@@ -95,7 +134,17 @@ export async function POST(req: Request) {
               receivedAt: mention.createdAt ? new Date(mention.createdAt) : new Date(),
               updatedAt: new Date(),
             },
+          })
+          .returning();
+
+        if (!existing[0] && upserted[0]) {
+          emitInboxEvent('inbox.new_mention', upserted[0].id, accountSlot, {
+            sourceId: mention.sourceId,
+            authorUserId: mention.authorUserId,
+            authorUsername: mention.authorUsername,
+            text: mention.text,
           });
+        }
       }
       mentionCount = mentions.length;
     }
@@ -108,7 +157,17 @@ export async function POST(req: Request) {
       );
 
       for (const dm of dms) {
-        await db
+        const existing = await db
+          .select()
+          .from(engagementInbox)
+          .where(and(
+            eq(engagementInbox.accountSlot, accountSlot),
+            eq(engagementInbox.sourceType, 'dm'),
+            eq(engagementInbox.sourceId, dm.sourceId),
+          ))
+          .limit(1);
+
+        const upserted = await db
           .insert(engagementInbox)
           .values({
             accountSlot,
@@ -132,7 +191,16 @@ export async function POST(req: Request) {
               receivedAt: dm.createdAt ? new Date(dm.createdAt) : new Date(),
               updatedAt: new Date(),
             },
+          })
+          .returning();
+
+        if (!existing[0] && upserted[0]) {
+          emitInboxEvent('inbox.new_dm', upserted[0].id, accountSlot, {
+            sourceId: dm.sourceId,
+            authorUserId: dm.senderUserId,
+            text: dm.text,
           });
+        }
       }
       dmCount = dms.length;
     }

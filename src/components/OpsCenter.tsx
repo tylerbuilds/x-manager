@@ -14,6 +14,7 @@ import {
   ClipboardCheck,
   Sparkles,
 } from 'lucide-react';
+import AutomationWorkbench from './AutomationWorkbench';
 
 type InboxStatus = 'new' | 'reviewed' | 'replied' | 'dismissed';
 
@@ -847,6 +848,8 @@ export default function OpsCenter() {
           </div>
         </section>
       </div>
+
+      <AutomationWorkbench />
 
       {/* Saved Replies Manager Modal */}
       {showSavedRepliesManager && (

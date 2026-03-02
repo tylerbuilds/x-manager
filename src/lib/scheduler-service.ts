@@ -11,6 +11,9 @@ import { decryptAccountTokens } from './x-account-crypto';
 import { markSchedulerStarted, markCycleSuccess, markCycleError } from './scheduler-health';
 import { emitEvent } from './events';
 import { deliverEventToWebhooks } from './webhook-delivery';
+import { runScheduledAutomationRules } from './automation-executor';
+import { runFeedProcessor } from './feed-processor';
+import { runKeywordMonitor } from './keyword-monitor';
 
 type LogFn = (...args: unknown[]) => void;
 
@@ -176,20 +179,28 @@ export async function runSchedulerCycle(logger: SchedulerLogger = defaultLogger)
   try {
     const config = await getResolvedXConfig();
 
+    try {
+      await runScheduledAutomationRules(logger);
+      await runFeedProcessor(logger);
+      await runKeywordMonitor(logger);
+    } catch (processorError) {
+      logger.error('Background processor failure:', processorError);
+    }
+
     const connectedAccounts = await getConnectedAccounts();
     const accountBySlot = new Map(
       connectedAccounts.map((account) => [account.slot, account]),
     );
 
-    if (accountBySlot.size === 0) {
-      logger.info('No connected X accounts found. Scheduler cycle skipped.');
-      return { skipped: true, processed: 0, posted: 0, failed: 0 };
-    }
-
     const duePosts = await getDuePosts();
     if (duePosts.length === 0) {
       markCycleSuccess();
       return { skipped: false, processed: 0, posted: 0, failed: 0 };
+    }
+
+    if (accountBySlot.size === 0) {
+      logger.info('No connected X accounts found. Scheduler cycle skipped.');
+      return { skipped: true, processed: 0, posted: 0, failed: 0 };
     }
 
     let posted = 0;
