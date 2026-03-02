@@ -7,12 +7,7 @@ import { runKeywordTriggeredRules } from './automation-executor';
 import { requireConnectedAccount, recordEngagementAction } from './engagement-ops';
 import { likeTweet, postTweet } from './twitter-api-client';
 import { renderTemplate } from './template-utils';
-
-type Logger = {
-  info: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-};
+import type { Logger } from './logger';
 
 function parseKeywords(raw: string): string[] {
   try {

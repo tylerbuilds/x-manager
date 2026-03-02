@@ -7,7 +7,8 @@ import EmojiPicker, { EmojiClickData, EmojiStyle, Theme } from 'emoji-picker-rea
 import { GiphyFetch } from '@giphy/js-fetch-api';
 import { Grid } from '@giphy/react-components';
 import type { IGif } from '@giphy/js-types';
-import { debugLog } from '@/lib/debug';
+import ThreadComposer from './ThreadComposer';
+import AiWriter from './AiWriter';
 
 // Add Giphy API instance
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY || '__REMOVED__');
@@ -177,6 +178,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
   const [attachedImages, setAttachedImages] = useState<File[]>([]);
   const [attachedGifs, setAttachedGifs] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showThreadComposer, setShowThreadComposer] = useState(false);
   
   // UI states
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -234,7 +236,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
     try {
       await Promise.all([fetchScheduledPosts(), fetchCommunityTags()]);
     } catch (error) {
-      debugLog.error('Error fetching scheduler data:', error);
+      console.error('Error fetching scheduler data:', error);
     } finally {
       setLoading(false);
     }
@@ -244,11 +246,11 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
     try {
       const response = await fetch('/api/scheduler/posts?include_metrics=true');
       if (response.ok) {
-        const posts = await response.json();
-        setScheduledPosts(posts);
+        const data = await response.json();
+        setScheduledPosts(Array.isArray(data) ? data : Array.isArray(data.posts) ? data.posts : []);
       }
     } catch (error) {
-      debugLog.error('Error fetching scheduled posts:', error);
+      console.error('Error fetching scheduled posts:', error);
     }
   };
 
@@ -260,7 +262,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         setCommunityTags(tags);
       }
     } catch (error) {
-      debugLog.error('Error fetching community tags:', error);
+      console.error('Error fetching community tags:', error);
     }
   };
 
@@ -273,7 +275,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         setQueueItems(data.items || []);
       }
     } catch (error) {
-      debugLog.error('Error fetching queue:', error);
+      console.error('Error fetching queue:', error);
     }
   };
 
@@ -290,7 +292,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         fetchQueue();
       }
     } catch (error) {
-      debugLog.error('Error adding to queue:', error);
+      console.error('Error adding to queue:', error);
     }
   };
 
@@ -299,7 +301,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       await fetch(`/api/scheduler/queue/${id}`, { method: 'DELETE' });
       fetchQueue();
     } catch (error) {
-      debugLog.error('Error removing from queue:', error);
+      console.error('Error removing from queue:', error);
     }
   };
 
@@ -313,12 +315,12 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       });
       if (response.ok) {
         const result = await response.json();
-        debugLog.log(`Auto-scheduled ${result.scheduled} posts`);
+        console.log(`Auto-scheduled ${result.scheduled} posts`);
         fetchQueue();
         fetchScheduledPosts();
       }
     } catch (error) {
-      debugLog.error('Error auto-scheduling:', error);
+      console.error('Error auto-scheduling:', error);
     } finally {
       setIsAutoScheduling(false);
     }
@@ -347,7 +349,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         fetchScheduledPosts();
       }
     } catch (error) {
-      debugLog.error('Bulk action failed:', error);
+      console.error('Bulk action failed:', error);
     }
   };
 
@@ -471,7 +473,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         await fetchScheduledPosts();
       }
     } catch (error) {
-      debugLog.error('Failed to reschedule post:', error);
+      console.error('Failed to reschedule post:', error);
     }
   };
 
@@ -636,7 +638,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
           const file = new File([blob], `gif_${Date.now()}.gif`, { type: 'image/gif' });
           formData.append('files', file);
         } catch (error) {
-          debugLog.error('Error processing GIF:', error);
+          console.error('Error processing GIF:', error);
         }
       }
 
@@ -669,7 +671,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         throw new Error('Failed to save post');
       }
     } catch (error) {
-      debugLog.error('Error saving post:', error);
+      console.error('Error saving post:', error);
       alert('Failed to save post. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -700,7 +702,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         throw new Error('Failed to delete post');
       }
     } catch (error) {
-      debugLog.error('Error deleting post:', error);
+      console.error('Error deleting post:', error);
       alert('Failed to delete post. Please try again.');
     }
   }, []);
@@ -738,7 +740,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         throw new Error('Failed to delete all posts');
       }
     } catch (error) {
-      debugLog.error('Error deleting all posts:', error);
+      console.error('Error deleting all posts:', error);
       alert('Failed to delete all posts. Please try again.');
     }
   }, [scheduledPosts.length]);
@@ -771,7 +773,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         throw new Error('Failed to save tag');
       }
     } catch (error) {
-      debugLog.error('Error saving tag:', error);
+      console.error('Error saving tag:', error);
       alert('Failed to save tag. Please try again.');
     } finally {
       setIsSavingTag(false);
@@ -792,7 +794,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         throw new Error('Failed to delete tag');
       }
     } catch (error) {
-      debugLog.error('Error deleting tag:', error);
+      console.error('Error deleting tag:', error);
       alert('Failed to delete tag. Please try again.');
     }
   };
@@ -888,7 +890,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       {!compact && (
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         {/* Slot Toggles */}
-        <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200">
+        <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
            <button
              onClick={() => toggleSlotVisibility(1)}
              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
@@ -922,6 +924,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
             <span>Manage Tags</span>
           </button>
           <button
+            onClick={() => setShowThreadComposer(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto justify-center"
+          >
+            <List size={14} />
+            Thread
+          </button>
+          <button
             onClick={() => handleCreatePost()}
             className="flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
           >
@@ -944,13 +953,22 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 <Tag size={16} />
               </button>
            </div>
-           <button
-              onClick={() => handleCreatePost()}
-              className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              title="New Post"
-            >
-              <Plus size={16} />
-            </button>
+           <div className="flex gap-2">
+             <button
+               onClick={() => setShowThreadComposer(true)}
+               className="p-1.5 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+               title="New Thread"
+             >
+               <List size={16} />
+             </button>
+             <button
+               onClick={() => handleCreatePost()}
+               className="p-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+               title="New Post"
+             >
+               <Plus size={16} />
+             </button>
+           </div>
         </div>
       )}
 
@@ -1518,9 +1536,9 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       {/* Create/Edit Post Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                 {editingPost ? 'Edit Scheduled Post' : 'Create Scheduled Post'}
               </h3>
               <button
@@ -1539,7 +1557,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
             <div className="space-y-4">
               {/* Post Content */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Post Content
                 </label>
                 <div className="space-y-0">
@@ -1547,7 +1565,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     value={postText}
                     onChange={(e) => setPostText(e.target.value)}
                     placeholder="What's happening?"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-400"
                     rows={4}
                     maxLength={280}
                   />
@@ -1654,12 +1672,18 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-500 order-1 sm:order-2">
+                    <div className="text-sm text-gray-500 dark:text-slate-400 order-1 sm:order-2">
                       {postText.length}/280
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* AI Writer */}
+              <AiWriter
+                onInsert={(text) => setPostText(text)}
+                existingText={postText}
+              />
 
               {/* Attached Images */}
               {attachedImages.length > 0 && (
@@ -1714,7 +1738,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               {/* Date and Time */}
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                     Date &amp; Time
                   </label>
                   <input
@@ -1725,11 +1749,30 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       validateDateTime(e.target.value);
                     }}
                     min={formatDateTimeForInput(new Date())}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/scheduler/suggest-time?account_slot=${selectedAccountSlot}&count=1`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.recommended) {
+                            const dt = new Date(data.recommended);
+                            setSelectedDateTime(formatDateTimeForInput(dt));
+                          }
+                        }
+                      } catch {}
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 mt-1"
+                  >
+                    <Sparkles size={12} />
+                    Suggest best time
+                  </button>
                 </div>
-                
+
                 {/* Date/Time Error Message */}
                 {dateTimeError && (
                   <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">
@@ -1740,13 +1783,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
               {/* Community Tag */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   X Account
                 </label>
                 <select
                   value={selectedAccountSlot}
                   onChange={(e) => setSelectedAccountSlot(Number(e.target.value))}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                 >
                   <option value={1}>Account 1</option>
                   <option value={2}>Account 2</option>
@@ -1755,13 +1798,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
               {/* Community Tag */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Community (Optional)
                 </label>
                 <select
                   value={selectedCommunityTag}
                   onChange={(e) => setSelectedCommunityTag(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                 >
                   <option value="">Select a community...</option>
                   {communityTags.map((tag) => (
@@ -1773,7 +1816,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                   Reply To Post ID (Optional)
                 </label>
                 <input
@@ -1781,15 +1824,15 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                   value={replyToTweetId}
                   onChange={(e) => setReplyToTweetId(e.target.value)}
                   placeholder="e.g. 1893289302711484472"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                 />
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                   If set, this scheduled post will be published as a reply thread item.
                 </p>
               </div>
 
               {/* Actions */}
-              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-slate-700">
                 <button
                   onClick={() => {
                     preserveScrollPosition(() => {
@@ -1797,7 +1840,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       resetForm();
                     });
                   }}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors order-2 sm:order-1"
+                  className="px-4 py-2 text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 transition-colors order-2 sm:order-1"
                 >
                   Cancel
                 </button>
@@ -1912,9 +1955,9 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       )}
 
       {/* Posts History */}
-      <div className="dashboard-card">
-        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Scheduled Posts History</h3>
+      <div className="dashboard-card dark:bg-slate-800 dark:border-slate-700">
+        <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Scheduled Posts History</h3>
           {scheduledPosts.length > 0 && (
             <button
               onClick={handleClearAllPosts}
@@ -1939,7 +1982,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               {scheduledPosts
                 .sort((a, b) => new Date(b.scheduledTime).getTime() - new Date(a.scheduledTime).getTime())
                 .map((post) => (
-                  <div key={post.id} className="border border-gray-200 rounded-lg p-4">
+                  <div key={post.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4 dark:bg-slate-800/50">
                     <div className="flex flex-col sm:flex-row items-start justify-between gap-3">
                       <div className="flex-1 w-full">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
@@ -1964,7 +2007,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                             </div>
                           )}
                         </div>
-                        <p className="text-gray-900 mb-2 leading-relaxed">{post.text}</p>
+                        <p className="text-gray-900 dark:text-slate-100 mb-2 leading-relaxed">{post.text}</p>
                         {post.replyToTweetId && (
                           <div className="text-sm text-cyan-700 mb-2">
                             Replying to post: {post.replyToTweetId}
@@ -2016,6 +2059,34 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
           )}
         </div>
       </div>
+
+      {/* Thread Composer Modal */}
+      {showThreadComposer && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 dark:bg-black/60 overflow-y-auto pt-8 pb-8 px-4">
+          <div className="w-full max-w-2xl">
+            <ThreadComposer
+              accountSlot={selectedAccountSlot}
+              onSubmit={async (tweets, scheduledTime) => {
+                const response = await fetch('/api/scheduler/thread', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tweets: tweets.map(text => ({ text })),
+                    account_slot: selectedAccountSlot,
+                    scheduled_time: scheduledTime,
+                  }),
+                });
+                if (!response.ok) throw new Error('Failed to create thread');
+                setShowThreadComposer(false);
+                await fetchScheduledPosts();
+                onUpdate?.();
+              }}
+              onCancel={() => setShowThreadComposer(false)}
+              isSubmitting={isSubmitting}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
-} 
+}

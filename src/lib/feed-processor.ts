@@ -5,12 +5,7 @@ import { emitEvent } from './events';
 import { assertPublicUrl } from './network-safety';
 import { createScheduledPost } from './post-scheduler';
 import { renderTemplate } from './template-utils';
-
-type Logger = {
-  info: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-};
+import type { Logger } from './logger';
 
 type ParsedFeedEntry = {
   id: string;

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { sqlite } from './db';
-import { debugLog } from './debug';
+import { logger } from './logger';
+
+const log = logger('idempotency');
 
 const DEFAULT_TTL_SECONDS = 86400; // 24 hours
 
@@ -25,7 +27,7 @@ function cleanupExpired(): void {
     const nowEpoch = Math.floor(Date.now() / 1000);
     sqlite.prepare('DELETE FROM api_idempotency WHERE expires_at <= ?').run(nowEpoch);
   } catch (err) {
-    debugLog.warn('[idempotency] cleanup failed:', err);
+    log.warn('cleanup failed', err instanceof Error ? err : undefined);
   }
 }
 

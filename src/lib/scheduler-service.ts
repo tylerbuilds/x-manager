@@ -14,14 +14,9 @@ import { deliverEventToWebhooks } from './webhook-delivery';
 import { runScheduledAutomationRules } from './automation-executor';
 import { runFeedProcessor } from './feed-processor';
 import { runKeywordMonitor } from './keyword-monitor';
+import { logger, type Logger } from './logger';
 
-type LogFn = (...args: unknown[]) => void;
-
-interface SchedulerLogger {
-  info: LogFn;
-  warn: LogFn;
-  error: LogFn;
-}
+type SchedulerLogger = Logger;
 
 interface SchedulerCycleResult {
   skipped: boolean;
@@ -41,11 +36,7 @@ const runningLoops = new Map<string, NodeJS.Timeout>();
 const schedulerOwnerId = `${process.pid}-${crypto.randomUUID().slice(0, 8)}`;
 const schedulerLockKey = 'scheduler-cycle';
 
-const defaultLogger: SchedulerLogger = {
-  info: (...args) => console.log('[scheduler]', ...args),
-  warn: (...args) => console.warn('[scheduler]', ...args),
-  error: (...args) => console.error('[scheduler]', ...args),
-};
+const defaultLogger: SchedulerLogger = logger('scheduler');
 
 function parseMediaUrls(value: string | null): string[] {
   if (!value) return [];

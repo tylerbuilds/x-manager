@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Lock, ShieldCheck } from 'lucide-react';
+import CommandPalette from '@/components/ui/CommandPalette';
+import { useKeyboardShortcuts } from '@/components/ui/KeyboardShortcuts';
 import MainDashboard from '@/components/MainDashboard';
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
@@ -24,6 +26,7 @@ export default function Home() {
   const [authError, setAuthError] = useState('');
   const [submittingAuth, setSubmittingAuth] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
   useEffect(() => {
     const loadSession = async () => {
@@ -88,6 +91,10 @@ export default function Home() {
     }
   };
 
+  useKeyboardShortcuts([
+    { key: 'k', meta: true, handler: () => setCommandPaletteOpen(true), description: 'Open search', category: 'Navigation' },
+  ]);
+
   const viewBody = useMemo(() => {
     if (currentView === 'dashboard') {
       return <MainDashboard />;
@@ -95,10 +102,10 @@ export default function Home() {
 
     if (currentView === 'calendar') {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
-          <div className="mb-4 pb-4 border-b border-slate-100">
-            <h2 className="text-xl font-semibold text-slate-900">Content Planner</h2>
-            <p className="text-sm text-slate-500">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 min-h-[calc(100vh-124px)]">
+          <div className="mb-4 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Content Planner</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               Visualize and manage your scheduled posts across connected X accounts.
             </p>
           </div>
@@ -109,7 +116,7 @@ export default function Home() {
 
     if (currentView === 'discovery') {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 min-h-[calc(100vh-124px)]">
           <TopicDiscovery />
         </div>
       );
@@ -117,7 +124,7 @@ export default function Home() {
 
     if (currentView === 'analytics') {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 min-h-[calc(100vh-124px)]">
           <Analytics />
         </div>
       );
@@ -125,7 +132,7 @@ export default function Home() {
 
     if (currentView === 'drafts') {
       return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 min-h-[calc(100vh-124px)]">
           <DraftManager />
         </div>
       );
@@ -138,9 +145,9 @@ export default function Home() {
     if (currentView === 'accounts') {
       return (
         <div className="space-y-4">
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <h2 className="text-xl font-semibold text-slate-900">Your X Accounts</h2>
-            <p className="text-sm text-slate-500 mt-1">
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Your X Accounts</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               Connect up to two X profiles to manage them from one place.
             </p>
           </div>
@@ -151,11 +158,11 @@ export default function Home() {
 
     return (
       <div className="space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 inline-flex items-start gap-3">
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 inline-flex items-start gap-3">
           <ShieldCheck className="h-5 w-5 text-emerald-600 mt-0.5" />
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">System Settings</h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">System Settings</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
               API credentials are encrypted at rest when `X_MANAGER_ENCRYPTION_KEY` is configured.
             </p>
           </div>
@@ -167,21 +174,21 @@ export default function Home() {
 
   if (authLoading) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+      <main className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-500 dark:text-slate-400" />
       </main>
     );
   }
 
   if (authRequired && !authenticated) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-md bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
+      <main className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center px-4">
+        <div className="w-full max-w-md bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6 space-y-4">
           <div className="flex items-center gap-2">
-            <Lock size={18} className="text-slate-700" />
-            <h1 className="text-lg font-semibold text-slate-900">Unlock X Manager</h1>
+            <Lock size={18} className="text-slate-700 dark:text-slate-300" />
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Unlock X Manager</h1>
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Enter your `X_MANAGER_ADMIN_TOKEN` to access the dashboard and APIs.
           </p>
           <input
@@ -194,13 +201,13 @@ export default function Home() {
               }
             }}
             placeholder="Admin token"
-            className="w-full p-3 border border-slate-300 rounded-lg"
+            className="w-full p-3 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500"
           />
-          {authError && <p className="text-sm text-red-600">{authError}</p>}
+          {authError && <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>}
           <button
             onClick={handleUnlock}
             disabled={submittingAuth}
-            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-slate-600 disabled:opacity-50"
           >
             {submittingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock size={16} />}
             <span>{submittingAuth ? 'Unlocking...' : 'Unlock'}</span>
@@ -211,17 +218,22 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50">
+    <main className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-cyan-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950">
       <Sidebar
         activeView={currentView}
         onViewChange={(view) => setCurrentView(view as AppView)}
         onLogout={handleLogout}
       />
-      <Topbar activeView={currentView} onViewChange={(view) => setCurrentView(view as AppView)} onLogout={handleLogout} />
+      <Topbar activeView={currentView} onViewChange={(view) => setCurrentView(view as AppView)} onLogout={handleLogout} onSearchClick={() => setCommandPaletteOpen(true)} />
 
       <div className="pl-16 pt-16">
         <div className="p-6">{viewBody}</div>
       </div>
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onNavigate={(view) => setCurrentView(view as AppView)}
+      />
     </main>
   );
 }

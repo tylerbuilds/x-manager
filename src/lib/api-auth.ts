@@ -42,10 +42,22 @@ function adminTokenFingerprint(adminToken: string): string {
   return crypto.createHash('sha256').update(`admin-token:${adminToken}`).digest('hex').slice(0, 16);
 }
 
+// Must match middleware.ts getSessionSecret() — derive via HMAC when no explicit secret.
+let _derivedSessionSecret: string | null = null;
 function getSessionSecret(): string {
-  return stableTrim(process.env.X_MANAGER_SESSION_SECRET)
-    || stableTrim(process.env.X_MANAGER_ENCRYPTION_KEY)
+  const explicit = stableTrim(process.env.X_MANAGER_SESSION_SECRET);
+  if (explicit) return explicit;
+
+  const baseKey = stableTrim(process.env.X_MANAGER_ENCRYPTION_KEY)
     || stableTrim(process.env.X_MANAGER_ADMIN_TOKEN);
+  if (!baseKey) return '';
+
+  if (!_derivedSessionSecret) {
+    _derivedSessionSecret = crypto.createHmac('sha256', baseKey)
+      .update('x-manager:session-signing-key:v1')
+      .digest('hex');
+  }
+  return _derivedSessionSecret;
 }
 
 function signPayload(payload: string, secret: string): string {

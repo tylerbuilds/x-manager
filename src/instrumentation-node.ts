@@ -1,5 +1,7 @@
 import { runBootChecks } from './lib/boot-checks';
+import { logger } from './lib/logger';
 
+const log = logger('instrumentation');
 const STARTUP_RETRIES = 3;
 const RETRY_DELAY_MS = 5_000;
 
@@ -13,25 +15,25 @@ async function startWithRetry(name: string, fn: () => void | Promise<void>): Pro
       await fn();
       return;
     } catch (error) {
-      console.error(`[instrumentation] ${name} startup failed (attempt ${attempt}/${STARTUP_RETRIES}):`, error);
+      log.error(`${name} startup failed (attempt ${attempt}/${STARTUP_RETRIES})`, error instanceof Error ? error : undefined);
       if (attempt < STARTUP_RETRIES) {
         await sleep(RETRY_DELAY_MS);
       }
     }
   }
-  console.error(`[instrumentation] ${name} failed after ${STARTUP_RETRIES} attempts. NOT RUNNING.`);
+  log.error(`${name} failed after ${STARTUP_RETRIES} attempts. NOT RUNNING.`);
 }
 
 export function registerNodeInstrumentation(): void {
   runBootChecks();
 
   process.on('uncaughtException', (error) => {
-    console.error('[FATAL] Uncaught exception:', error);
+    log.error('Uncaught exception', error);
     // Do NOT process.exit() — kills the entire single-process Next.js server.
   });
 
   process.on('unhandledRejection', (reason) => {
-    console.error('[FATAL] Unhandled rejection:', reason);
+    log.error('Unhandled rejection', reason instanceof Error ? reason : undefined);
   });
 
   void startWithRetry('Post scheduler', async () => {
@@ -42,19 +44,19 @@ export function registerNodeInstrumentation(): void {
   void startWithRetry('Action scheduler', async () => {
     const { startActionSchedulerLoop } = await import('./lib/action-scheduler');
     startActionSchedulerLoop({ intervalSeconds: 30 });
-    console.log('[instrumentation] Action scheduler started (30s interval).');
+    log.info('Action scheduler started (30s interval).');
   });
 
   void startWithRetry('Automation event listener', async () => {
     const { startAutomationEventListener } = await import('./lib/automation-executor');
     startAutomationEventListener();
-    console.log('[instrumentation] Automation event listener started.');
+    log.info('Automation event listener started.');
   });
 
   void startWithRetry('Recurring processor', async () => {
     const { processRecurringSchedules, isRecurringProcessorStarted, markRecurringProcessorStarted } = await import('./lib/recurring-processor');
     if (isRecurringProcessorStarted()) {
-      console.log('[instrumentation] Recurring processor already running, skipping.');
+      log.info('Recurring processor already running, skipping.');
       return;
     }
     markRecurringProcessorStarted();
@@ -63,19 +65,19 @@ export function registerNodeInstrumentation(): void {
       try {
         const result = await processRecurringSchedules();
         if (result.created > 0) {
-          console.log(`[recurring] Processed ${result.processed} schedules, created ${result.created} posts.`);
+          log.info(`Processed ${result.processed} recurring schedules, created ${result.created} posts.`);
         }
       } catch (error) {
-        console.error('[recurring] Error in recurring processor cycle:', error);
+        log.error('Recurring processor cycle error', error instanceof Error ? error : undefined);
       }
     }, intervalMs);
-    console.log(`[instrumentation] Recurring processor started (${intervalMs / 1000}s interval).`);
+    log.info(`Recurring processor started (${intervalMs / 1000}s interval).`);
   });
 
   void startWithRetry('Follower tracker', async () => {
     const { takeFollowerSnapshots, isFollowerTrackerStarted, markFollowerTrackerStarted } = await import('./lib/follower-tracker');
     if (isFollowerTrackerStarted()) {
-      console.log('[instrumentation] Follower tracker already running, skipping.');
+      log.info('Follower tracker already running, skipping.');
       return;
     }
     markFollowerTrackerStarted();
@@ -85,34 +87,34 @@ export function registerNodeInstrumentation(): void {
       try {
         const created = takeFollowerSnapshots();
         if (created > 0) {
-          console.log(`[followers] Recorded ${created} follower snapshot(s).`);
+          log.info(`Recorded ${created} follower snapshot(s).`);
         }
       } catch (error) {
-        console.error('[followers] Error in follower tracker cycle:', error);
+        log.error('Follower tracker cycle error', error instanceof Error ? error : undefined);
       }
     }, intervalMs);
     // Take initial snapshot on startup
     try {
       takeFollowerSnapshots();
     } catch { /* best-effort */ }
-    console.log('[instrumentation] Follower tracker started (1h interval).');
+    log.info('Follower tracker started (1h interval).');
   });
 
   // S5 fix: Recover pending webhook deliveries that were lost on previous restart
   void startWithRetry('Webhook recovery', async () => {
     const { recoverPendingDeliveries } = await import('./lib/webhook-delivery');
     recoverPendingDeliveries();
-    console.log('[instrumentation] Webhook delivery recovery complete.');
+    log.info('Webhook delivery recovery complete.');
   });
 
   if (process.env.DISABLE_METRICS_COLLECTOR === 'true') {
-    console.log('[instrumentation] Metrics collector disabled via DISABLE_METRICS_COLLECTOR.');
+    log.info('Metrics collector disabled via DISABLE_METRICS_COLLECTOR.');
   } else {
     const metricsInterval = Math.max(60, Number(process.env.METRICS_INTERVAL_SECONDS) || 3600);
     void startWithRetry('Metrics collector', async () => {
       const { startMetricsCollectorLoop } = await import('./lib/metrics-collector');
       startMetricsCollectorLoop(metricsInterval);
-      console.log(`[instrumentation] Metrics collector started (${metricsInterval}s interval).`);
+      log.info(`Metrics collector started (${metricsInterval}s interval).`);
     });
   }
 }

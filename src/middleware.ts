@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { logger } from './lib/logger';
 
+const log = logger('http');
 const XM_SESSION_COOKIE = 'x_manager_session';
 const SESSION_VERSION = 'v1';
 
@@ -207,19 +209,30 @@ async function requestHasValidAuth(req: NextRequest): Promise<boolean> {
   return false;
 }
 
+function logRequest(method: string, path: string, status: number, ms: number, ip: string): void {
+  const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
+  log[level]('request', { method, path, status, ms, ip });
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (!pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
+  const start = Date.now();
+  const method = req.method;
+  const ip = getClientIpFromRequest(req);
+
   if (isPublicApiPath(pathname)) {
+    logRequest(method, pathname, 200, Date.now() - start, ip);
     return NextResponse.next();
   }
 
   // Global rate limiting
   const rate = checkGlobalRate(req);
   if (!rate.ok) {
+    logRequest(method, pathname, 429, Date.now() - start, ip);
     return NextResponse.json(
       { error: 'Too many requests.', code: 'RATE_LIMIT_EXCEEDED' },
       {
@@ -233,10 +246,12 @@ export async function middleware(req: NextRequest) {
   }
 
   if (!isAuthRequired()) {
+    logRequest(method, pathname, 200, Date.now() - start, ip);
     return NextResponse.next();
   }
 
   if (!getAdminToken()) {
+    logRequest(method, pathname, 503, Date.now() - start, ip);
     return NextResponse.json(
       { error: 'Auth is required but X_MANAGER_ADMIN_TOKEN is not configured.' },
       {
@@ -247,9 +262,11 @@ export async function middleware(req: NextRequest) {
   }
 
   if (await requestHasValidAuth(req)) {
+    logRequest(method, pathname, 200, Date.now() - start, ip);
     return NextResponse.next();
   }
 
+  logRequest(method, pathname, 401, Date.now() - start, ip);
   return NextResponse.json(
     {
       error: 'Unauthorized.',

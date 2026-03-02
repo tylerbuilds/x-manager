@@ -8,24 +8,15 @@ import { getResolvedXConfig } from './x-config';
 import { decryptAccountTokens } from './x-account-crypto';
 import { checkPolicy } from './policy';
 import { normalizeAccountSlot } from './account-slots';
+import { logger, type Logger } from './logger';
 
 // ---------------------------------------------------------------------------
 // Logger
 // ---------------------------------------------------------------------------
 
-type LogFn = (...args: unknown[]) => void;
+type ActionSchedulerLogger = Logger;
 
-interface ActionSchedulerLogger {
-  info: LogFn;
-  warn: LogFn;
-  error: LogFn;
-}
-
-const defaultLogger: ActionSchedulerLogger = {
-  info: (...args) => console.log('[action-scheduler]', ...args),
-  warn: (...args) => console.warn('[action-scheduler]', ...args),
-  error: (...args) => console.error('[action-scheduler]', ...args),
-};
+const defaultLogger: ActionSchedulerLogger = logger('action-scheduler');
 
 // ---------------------------------------------------------------------------
 // Types

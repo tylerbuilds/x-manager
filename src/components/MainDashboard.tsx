@@ -92,12 +92,12 @@ export default function MainDashboard() {
 
       {hasConnectedAccount ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-280px)] min-h-[600px]">
-          
+
           {/* Column 1: Scheduler */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center gap-2">
               <Calendar size={18} className="text-teal-600" />
-              <h3 className="font-semibold text-slate-700">Scheduled Streams</h3>
+              <h3 className="font-semibold text-slate-700 dark:text-slate-300">Scheduled Streams</h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
               <Scheduler onUpdate={handleProfileUpdate} refreshTrigger={schedulerRefresh} compact={true} />
@@ -105,10 +105,10 @@ export default function MainDashboard() {
           </div>
 
           {/* Column 2: Discovery */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center gap-2">
               <Hash size={18} className="text-teal-600" />
-              <h3 className="font-semibold text-slate-700">Topic Discovery</h3>
+              <h3 className="font-semibold text-slate-700 dark:text-slate-300">Topic Discovery</h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
               <TopicDiscovery />
@@ -116,17 +116,17 @@ export default function MainDashboard() {
           </div>
 
           {/* Column 3: Tools */}
-          <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-             <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center gap-2">
               <FileInput size={18} className="text-teal-600" />
-              <h3 className="font-semibold text-slate-700">Import & Context</h3>
+              <h3 className="font-semibold text-slate-700 dark:text-slate-300">Import & Context</h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar">
               <CreateThreadFromArticle onScheduled={handleSchedulerRefresh} />
-              <div className="border-t border-slate-100 pt-6">
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-6">
                 <CsvImporter onImported={handleSchedulerRefresh} />
               </div>
-              <div className="border-t border-slate-100 pt-6">
+              <div className="border-t border-slate-100 dark:border-slate-700 pt-6">
                 <AddContext onSchedulerRefresh={handleSchedulerRefresh} />
               </div>
             </div>
@@ -134,10 +134,10 @@ export default function MainDashboard() {
 
         </div>
       ) : (
-        <div className="bg-white rounded-lg border border-slate-200 p-12 text-center shadow-sm">
+        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-12 text-center shadow-sm">
           <div className="max-w-md mx-auto">
-            <h3 className="text-lg font-medium text-slate-900 mb-2">Welcome to X Manager</h3>
-            <p className="text-slate-500 mb-6">Connect at least one X account slot above to access your professional dashboard.</p>
+            <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">Welcome to X Manager</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">Connect at least one X account slot above to access your professional dashboard.</p>
           </div>
         </div>
       )}

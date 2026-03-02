@@ -4,20 +4,11 @@ import { db, sqlite } from './db';
 import { scheduledPosts, postMetrics, xAccounts } from './db/schema';
 import { getResolvedXConfig, type ResolvedXConfig } from './x-config';
 import { decryptAccountTokens } from './x-account-crypto';
+import { logger, type Logger } from './logger';
 
-type LogFn = (...args: unknown[]) => void;
+type MetricsLogger = Logger;
 
-interface MetricsLogger {
-  info: LogFn;
-  warn: LogFn;
-  error: LogFn;
-}
-
-const defaultLogger: MetricsLogger = {
-  info: (...args) => console.log('[metrics-collector]', ...args),
-  warn: (...args) => console.warn('[metrics-collector]', ...args),
-  error: (...args) => console.error('[metrics-collector]', ...args),
-};
+const defaultLogger: MetricsLogger = logger('metrics-collector');
 
 const metricsOwnerId = `${process.pid}-${nodeCrypto.randomUUID().slice(0, 8)}`;
 const metricsLockKey = 'metrics-collector';
@@ -243,7 +234,7 @@ export function startMetricsCollectorLoop(intervalSeconds = 900): () => void {
 
   const timer = setInterval(() => {
     void runMetricsCollectionCycle().catch((error) => {
-      console.error('[metrics-collector] Cycle error:', error);
+      defaultLogger.error('Cycle error', error instanceof Error ? error : undefined);
     });
   }, intervalSeconds * 1000);
 
@@ -252,7 +243,7 @@ export function startMetricsCollectorLoop(intervalSeconds = 900): () => void {
   }
 
   runningTimer = timer;
-  console.log(`[metrics-collector] Started (${intervalSeconds}s interval).`);
+  defaultLogger.info(`Started (${intervalSeconds}s interval).`);
 
   return () => {
     if (runningTimer) {

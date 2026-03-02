@@ -9,21 +9,12 @@ import { parseAccountSlot, recordEngagementAction, requireConnectedAccount } fro
 import { likeTweet, postTweet, repostTweet, sendDirectMessage } from './twitter-api-client';
 import { assertPublicUrl } from './network-safety';
 import { suggestOptimalTime } from './optimal-time';
-
-type Logger = {
-  info: (...args: unknown[]) => void;
-  warn: (...args: unknown[]) => void;
-  error: (...args: unknown[]) => void;
-};
+import { logger as createLogger, type Logger } from './logger';
 
 type RuleRow = typeof automationRules.$inferSelect;
 type RuleRunStatus = 'success' | 'failed' | 'skipped';
 
-const defaultLogger: Logger = {
-  info: (...args) => console.log('[automation]', ...args),
-  warn: (...args) => console.warn('[automation]', ...args),
-  error: (...args) => console.error('[automation]', ...args),
-};
+const defaultLogger: Logger = createLogger('automation');
 
 declare global {
   var __xManagerAutomationListenerStarted: boolean | undefined;

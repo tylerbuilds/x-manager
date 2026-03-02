@@ -1,6 +1,7 @@
 'use client';
 
 import { Home, Calendar, Compass, Settings, Users, LogOut, Workflow, BarChart3, FileText } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/ThemeProvider';
 
 interface SidebarProps {
   activeView: string;
@@ -68,8 +69,9 @@ export default function Sidebar({ activeView, onViewChange, onLogout }: SidebarP
         />
       </nav>
 
-      <div className="mt-auto pb-4">
-         <NavItem icon={<LogOut size={22} />} label="Logout" onClick={onLogout} />
+      <div className="mt-auto pb-4 flex flex-col items-center gap-2">
+        <ThemeToggle />
+        <NavItem icon={<LogOut size={22} />} label="Logout" onClick={onLogout} />
       </div>
     </div>
   );

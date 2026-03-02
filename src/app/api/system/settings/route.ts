@@ -77,14 +77,17 @@ export async function PUT(req: Request) {
     const xApiBaseUrl = normalizeUrlOrEmpty(body.xApiBaseUrl);
     const xUploadApiBaseUrl = normalizeUrlOrEmpty(body.xUploadApiBaseUrl);
 
-    await upsertAppSettings({
-      x_api_key: body.xApiKey,
-      x_api_secret: body.xApiSecret,
-      x_bearer_token: body.xBearerToken,
-      app_base_url: appBaseUrl,
-      x_api_base_url: xApiBaseUrl,
-      x_upload_api_base_url: xUploadApiBaseUrl,
-    });
+    // Only include fields explicitly provided in the request body.
+    // Omitted fields must NOT be passed to upsertAppSettings — it deletes null/undefined keys.
+    const updates: Partial<Record<string, string | null | undefined>> = {};
+    if ('xApiKey' in body) updates.x_api_key = body.xApiKey;
+    if ('xApiSecret' in body) updates.x_api_secret = body.xApiSecret;
+    if ('xBearerToken' in body) updates.x_bearer_token = body.xBearerToken;
+    if ('appBaseUrl' in body) updates.app_base_url = appBaseUrl;
+    if ('xApiBaseUrl' in body) updates.x_api_base_url = xApiBaseUrl;
+    if ('xUploadApiBaseUrl' in body) updates.x_upload_api_base_url = xUploadApiBaseUrl;
+
+    await upsertAppSettings(updates);
 
     const [stored, resolved] = await Promise.all([
       getAppSettings(),

@@ -102,11 +102,11 @@ export default function ReadinessPanel({ refreshTrigger }: ReadinessPanelProps) 
     <div className="dashboard-card fade-up mb-6">
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">System Readiness</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">System Readiness</h3>
           <button
             onClick={refresh}
             disabled={isLoading}
-            className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50"
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Refresh
@@ -114,7 +114,7 @@ export default function ReadinessPanel({ refreshTrigger }: ReadinessPanelProps) 
         </div>
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-400">
             {error}
           </div>
         )}
@@ -122,32 +122,34 @@ export default function ReadinessPanel({ refreshTrigger }: ReadinessPanelProps) 
         {data && (
           <>
             <div className={`rounded-md p-3 text-sm ${
-              data.ready ? 'border border-green-200 bg-green-50 text-green-800' : 'border border-amber-200 bg-amber-50 text-amber-900'
+              data.ready
+                ? 'border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-400'
+                : 'border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-400'
             }`}>
               {data.ready ? 'Ready: credentials, at least one X account, and scheduler are configured.' : 'Not ready: complete the missing checks below.'}
             </div>
 
             <div className="space-y-2">
               {checks.map((check) => (
-                <div key={check.label} className="flex items-center justify-between p-2 rounded-md border border-gray-100">
+                <div key={check.label} className="flex items-center justify-between p-2 rounded-md border border-gray-100 dark:border-slate-700">
                   <div className="flex items-center gap-2">
                     {check.ok ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-500" />
                     ) : (
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
                     )}
-                    <span className="text-sm text-gray-800">{check.label}</span>
+                    <span className="text-sm text-gray-800 dark:text-slate-300">{check.label}</span>
                   </div>
-                  {check.meta && <span className="text-xs text-gray-500">{check.meta}</span>}
+                  {check.meta && <span className="text-xs text-gray-500 dark:text-slate-500">{check.meta}</span>}
                 </div>
               ))}
             </div>
 
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-slate-500">
               Checked at {new Date(data.checkedAt).toLocaleString()}
             </p>
             {data.runtime?.nodeVersion && (
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 dark:text-slate-500">
                 Node {data.runtime.nodeVersion}
               </p>
             )}
