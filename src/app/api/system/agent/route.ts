@@ -307,6 +307,30 @@ export async function GET(req: Request) {
         path: '/api/analytics/export',
         description: 'Export post metrics as CSV or JSON. Supports ?format=csv|json&period=30d&account_slot=1.',
       },
+      // Sprint 5: UX Polish
+      {
+        id: 'post_request_approval',
+        method: 'POST',
+        path: '/api/scheduler/posts/:id/request-approval',
+        description: 'Request approval for a scheduled post. Post status changes to pending_approval.',
+        fields: [{ name: 'requested_by', type: 'string', description: 'Who requested (default: user).' }],
+      },
+      {
+        id: 'post_approve',
+        method: 'PATCH',
+        path: '/api/scheduler/posts/:id/approve',
+        description: 'Approve or reject a pending post approval.',
+        fields: [
+          { name: 'decision', type: 'string', description: 'approved or rejected (required).' },
+          { name: 'note', type: 'string', description: 'Optional decision note.' },
+        ],
+      },
+      {
+        id: 'global_search',
+        method: 'GET',
+        path: '/api/search',
+        description: 'Search across posts, inbox, campaigns, drafts, templates. Use ?q=keyword&limit=20.',
+      },
       {
         id: 'actions_list',
         method: 'GET',

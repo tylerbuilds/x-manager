@@ -11,8 +11,9 @@ import TwitterConnector from '@/components/TwitterConnector';
 import SetupPanel from '@/components/SetupPanel';
 import OpsCenter from '@/components/OpsCenter';
 import Analytics from '@/components/Analytics';
+import DraftManager from '@/components/DraftManager';
 
-type AppView = 'dashboard' | 'calendar' | 'discovery' | 'ops' | 'analytics' | 'accounts' | 'settings';
+type AppView = 'dashboard' | 'calendar' | 'discovery' | 'ops' | 'analytics' | 'drafts' | 'accounts' | 'settings';
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<AppView>('dashboard');
@@ -118,6 +119,14 @@ export default function Home() {
       return (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
           <Analytics />
+        </div>
+      );
+    }
+
+    if (currentView === 'drafts') {
+      return (
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 min-h-[calc(100vh-124px)]">
+          <DraftManager />
         </div>
       );
     }

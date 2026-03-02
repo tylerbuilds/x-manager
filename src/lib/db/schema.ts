@@ -38,9 +38,10 @@ export const scheduledPosts = sqliteTable('scheduled_posts', {
   communityId: text('community_id'),
   replyToTweetId: text('reply_to_tweet_id'),
   scheduledTime: integer('scheduled_time', { mode: 'timestamp' }).notNull(),
-  status: text('status', { enum: ['scheduled', 'posted', 'failed', 'cancelled'] }).default('scheduled').notNull(),
+  status: text('status', { enum: ['scheduled', 'posted', 'failed', 'cancelled', 'pending_approval'] }).default('scheduled').notNull(),
   twitterPostId: text('twitter_post_id'),
   errorMessage: text('error_message'),
+  tags: text('tags'), // JSON array of tag strings
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
@@ -510,6 +511,19 @@ export const followerSnapshots = sqliteTable('follower_snapshots', {
   followersCount: integer('followers_count').notNull(),
   followingCount: integer('following_count').notNull(),
   snapshotAt: integer('snapshot_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+});
+
+// Sprint 5: Post approvals
+export const postApprovals = sqliteTable('post_approvals', {
+  id: integer('id').primaryKey(),
+  postId: integer('post_id').notNull(),
+  requestedBy: text('requested_by').notNull().default('user'),
+  status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
+  decisionNote: text('decision_note'),
+  requestedAt: integer('requested_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  decidedAt: integer('decided_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`CURRENT_TIMESTAMP`),
 });
 
 export const agentWebhooks = sqliteTable('agent_webhooks', {

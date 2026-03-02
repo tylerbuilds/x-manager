@@ -46,6 +46,7 @@ const KNOWN_TABLES = new Set([
   'automation_rules', 'automation_rule_runs', 'feeds', 'feed_entries',
   'saved_searches', 'saved_search_matches',
   'short_urls', 'url_clicks', 'follower_snapshots',
+  'post_approvals',
 ]);
 
 function hasColumn(sqlite: SqliteDb, tableName: string, columnName: string): boolean {
@@ -702,6 +703,23 @@ export function ensureSchema(sqlite: SqliteDb): void {
     );
     CREATE INDEX IF NOT EXISTS idx_follower_snapshots_slot_time
       ON follower_snapshots(account_slot, snapshot_at);
+
+    -- Sprint 5: Post Approvals
+    CREATE TABLE IF NOT EXISTS post_approvals (
+      id INTEGER PRIMARY KEY,
+      post_id INTEGER NOT NULL,
+      requested_by TEXT NOT NULL DEFAULT 'user',
+      status TEXT NOT NULL DEFAULT 'pending',
+      decision_note TEXT,
+      requested_at INTEGER DEFAULT (unixepoch()),
+      decided_at INTEGER,
+      created_at INTEGER DEFAULT (unixepoch()),
+      updated_at INTEGER DEFAULT (unixepoch())
+    );
+    CREATE INDEX IF NOT EXISTS idx_post_approvals_post
+      ON post_approvals(post_id);
+    CREATE INDEX IF NOT EXISTS idx_post_approvals_status
+      ON post_approvals(status);
   `);
 
   // P1.4: Approval gating columns on campaign_tasks
@@ -802,6 +820,14 @@ export function ensureSchema(sqlite: SqliteDb): void {
     'scheduled_posts',
     'error_message',
     'ALTER TABLE scheduled_posts ADD COLUMN error_message TEXT',
+  );
+
+  // Sprint 5: Tags on posts
+  ensureColumn(
+    sqlite,
+    'scheduled_posts',
+    'tags',
+    'ALTER TABLE scheduled_posts ADD COLUMN tags TEXT',
   );
 
   // Profile enrichment columns on x_accounts

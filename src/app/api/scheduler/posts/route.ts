@@ -74,11 +74,17 @@ export async function GET(req: Request) {
     }
 
     if (statusFilter) {
-      const validStatuses = ['scheduled', 'posted', 'failed', 'cancelled'] as const;
+      const validStatuses = ['scheduled', 'posted', 'failed', 'cancelled', 'pending_approval'] as const;
       type PostStatus = (typeof validStatuses)[number];
       if (validStatuses.includes(statusFilter as PostStatus)) {
         conditions.push(eq(scheduledPosts.status, statusFilter as PostStatus));
       }
+    }
+
+    const tagFilter = url.searchParams.get('tag')?.trim() || null;
+    if (tagFilter) {
+      const escapedTag = tagFilter.replace(/%/g, '\\%').replace(/_/g, '\\_');
+      conditions.push(like(scheduledPosts.tags, `%"${escapedTag}"%`));
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -281,6 +287,20 @@ export async function POST(req: Request) {
       }
     }
 
+    // Parse tags from form data (JSON array string)
+    const tagsRaw = (formData.get('tags') as string | null)?.trim() || null;
+    let tags: string[] = [];
+    if (tagsRaw) {
+      try {
+        const parsed = JSON.parse(tagsRaw);
+        if (Array.isArray(parsed)) {
+          tags = parsed.filter((t): t is string => typeof t === 'string' && t.trim().length > 0).map((t) => t.trim());
+        }
+      } catch {
+        // ignore invalid tags JSON
+      }
+    }
+
     try {
       const result = await createScheduledPost({
         accountSlot,
@@ -292,6 +312,7 @@ export async function POST(req: Request) {
         communityId,
         replyToTweetId,
         mediaUrls,
+        tags,
       });
       return NextResponse.json({ ...result.post, skipped: result.skipped });
     } catch (error) {

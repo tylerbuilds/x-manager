@@ -15,6 +15,7 @@ export interface CreateScheduledPostInput {
   sourceUrl?: string | null;
   threadId?: string | null;
   threadIndex?: number | null;
+  tags?: string[];
 }
 
 export async function createScheduledPost(input: CreateScheduledPostInput): Promise<{
@@ -57,6 +58,7 @@ export async function createScheduledPost(input: CreateScheduledPostInput): Prom
     communityId: input.communityId ?? null,
     replyToTweetId: input.replyToTweetId ?? null,
     scheduledTime: input.scheduledTime,
+    tags: input.tags?.length ? JSON.stringify(input.tags) : null,
   }).returning();
 
   const post = inserted[0];

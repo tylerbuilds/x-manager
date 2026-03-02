@@ -13,6 +13,7 @@ const VIEW_TITLES: Record<string, string> = {
   calendar: 'Content Planner',
   discovery: 'Topic Discovery',
   analytics: 'Analytics',
+  drafts: 'Draft Manager',
   ops: 'Ops Center',
   accounts: 'Accounts',
   settings: 'Settings',
