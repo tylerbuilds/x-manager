@@ -92,14 +92,14 @@ export default function TweetPreview({ text, className = '' }: TweetPreviewProps
       ? 'text-red-500 font-semibold'
       : charCount >= WARN_THRESHOLD
       ? 'text-yellow-500 font-medium'
-      : 'text-slate-400';
+      : 'text-slate-400 dark:text-slate-500';
 
   return (
-    <div className={`bg-white border border-slate-200 rounded-xl p-4 ${className}`}>
+    <div className={`bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 ${className}`}>
       {/* Tweet text body */}
-      <p className="font-sans text-[15px] leading-snug text-slate-900 whitespace-pre-wrap break-words min-h-[3rem]">
+      <p className="font-sans text-[15px] leading-snug text-slate-900 dark:text-slate-100 whitespace-pre-wrap break-words min-h-[3rem]">
         {text.length === 0 ? (
-          <span className="text-slate-300 italic">Tweet preview will appear here...</span>
+          <span className="text-slate-300 dark:text-slate-600 italic">Tweet preview will appear here...</span>
         ) : (
           segments.map((seg, i) => {
             if (seg.type === 'url') {
@@ -133,7 +133,7 @@ export default function TweetPreview({ text, className = '' }: TweetPreviewProps
       </p>
 
       {/* Character count */}
-      <div className="mt-3 flex items-center justify-end border-t border-slate-100 pt-2">
+      <div className="mt-3 flex items-center justify-end border-t border-slate-100 dark:border-slate-700 pt-2">
         <span className={`text-xs tabular-nums ${countColor}`}>
           {charCount} / {MAX_CHARS}
         </span>

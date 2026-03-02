@@ -138,35 +138,35 @@ export default function SetupPanel({ onSaved }: SetupPanelProps) {
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-2">
           <KeyRound className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-medium text-gray-900">First-Run Setup</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">First-Run Setup</h3>
         </div>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-slate-300">
           Paste your X API credentials here once, save, then connect account slot 1 and slot 2 below.
         </p>
 
         {hasAnyEnvOverride && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950 p-3 text-sm text-amber-900 dark:text-amber-200">
             Some values are coming from environment variables and will override saved setup values.
           </div>
         )}
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 inline-flex items-start gap-2">
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-3 text-sm text-red-700 dark:text-red-300 inline-flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {message && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 inline-flex items-start gap-2">
+          <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950 p-3 text-sm text-green-800 dark:text-green-300 inline-flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 mt-0.5" />
             <span>{message}</span>
           </div>
         )}
 
         {loading ? (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-slate-300">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span>Loading setup...</span>
           </div>
@@ -174,43 +174,43 @@ export default function SetupPanel({ onSaved }: SetupPanelProps) {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">X API Key</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">X API Key</label>
                 <input
                   type="password"
                   value={xApiKeyInput}
                   onChange={(e) => setXApiKeyInput(e.target.value)}
                   placeholder={hasXApiKey ? 'Saved (leave blank to keep)' : 'Enter API key'}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">X API Secret</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">X API Secret</label>
                 <input
                   type="password"
                   value={xApiSecretInput}
                   onChange={(e) => setXApiSecretInput(e.target.value)}
                   placeholder={hasXApiSecret ? 'Saved (leave blank to keep)' : 'Enter API secret'}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">X Bearer Token</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">X Bearer Token</label>
                 <input
                   type="password"
                   value={xBearerTokenInput}
                   onChange={(e) => setXBearerTokenInput(e.target.value)}
                   placeholder={hasXBearerToken ? 'Saved (leave blank to keep)' : 'Enter bearer token'}
-                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
                 />
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">App Base URL</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">App Base URL</label>
                 <input
                   type="text"
                   value={appBaseUrl}
                   onChange={(e) => setAppBaseUrl(e.target.value)}
                   placeholder="http://localhost:3000"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
+                  className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500"
                 />
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function SetupPanel({ onSaved }: SetupPanelProps) {
             <button
               type="button"
               onClick={() => setShowAdvanced((prev) => !prev)}
-              className="text-sm text-blue-700 hover:text-blue-800"
+              className="text-sm text-blue-700 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
             >
               {showAdvanced ? 'Hide advanced API host settings' : 'Show advanced API host settings'}
             </button>
@@ -226,21 +226,21 @@ export default function SetupPanel({ onSaved }: SetupPanelProps) {
             {showAdvanced && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">X API Base URL</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">X API Base URL</label>
                   <input
                     type="text"
                     value={xApiBaseUrl}
                     onChange={(e) => setXApiBaseUrl(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
+                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Upload API Base URL</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Upload API Base URL</label>
                   <input
                     type="text"
                     value={xUploadApiBaseUrl}
                     onChange={(e) => setXUploadApiBaseUrl(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-lg"
+                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100"
                   />
                 </div>
               </div>

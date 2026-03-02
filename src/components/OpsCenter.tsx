@@ -482,22 +482,22 @@ export default function OpsCenter() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
         <div className="flex flex-wrap items-center gap-3 justify-between">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Ops Center</h2>
-            <p className="text-sm text-slate-600">Agent-ready engagement inbox, campaign orchestration, and approvals.</p>
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Ops Center</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Agent-ready engagement inbox, campaign orchestration, and approvals.</p>
           </div>
           <div className="flex items-center gap-2">
             <select
               value={accountSlot}
               onChange={(event) => setAccountSlot(Number(event.target.value))}
-              className="p-2 border border-slate-300 rounded-lg text-sm"
+              className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm dark:bg-slate-700 dark:text-slate-200"
             >
               <option value={1}>Slot 1</option>
               <option value={2}>Slot 2</option>
             </select>
-            <label className="text-sm text-slate-700 inline-flex items-center gap-2">
+            <label className="text-sm text-slate-700 dark:text-slate-200 inline-flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={includeDms}
@@ -507,14 +507,14 @@ export default function OpsCenter() {
             </label>
             <button
               onClick={() => setShowSavedRepliesManager(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-sm"
+              className="inline-flex items-center gap-2 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-sm dark:text-slate-200"
             >
               Quick Replies
             </button>
             <button
               onClick={syncInbox}
               disabled={workingId === 'sync'}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-600 text-white rounded-lg hover:bg-slate-800 dark:hover:bg-slate-500 disabled:opacity-50"
             >
               {workingId === 'sync' ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span>Sync Inbox</span>
@@ -523,14 +523,14 @@ export default function OpsCenter() {
         </div>
 
         {statusMessage && (
-          <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 inline-flex items-start gap-2">
+          <div className="mt-4 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300 inline-flex items-start gap-2">
             <CheckCircle2 className="h-4 w-4 mt-0.5" />
             <span>{statusMessage}</span>
           </div>
         )}
 
         {errorMessage && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 inline-flex items-start gap-2">
+          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300 inline-flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-0.5" />
             <span>{errorMessage}</span>
           </div>
@@ -538,16 +538,16 @@ export default function OpsCenter() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <section className="xl:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
+        <section className="xl:col-span-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-slate-900 inline-flex items-center gap-2">
-              <MessageSquare size={18} className="text-slate-700" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 inline-flex items-center gap-2">
+              <MessageSquare size={18} className="text-slate-700 dark:text-slate-200" />
               Engagement Inbox
             </h3>
             <button
               onClick={loadInbox}
               disabled={loadingInbox}
-              className="text-sm px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+              className="text-sm px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200"
             >
               {loadingInbox ? 'Loading...' : 'Refresh'}
             </button>
@@ -559,12 +559,12 @@ export default function OpsCenter() {
               value={inboxSearch}
               onChange={(e) => setInboxSearch(e.target.value)}
               placeholder="Search inbox..."
-              className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
             />
             <select
               value={inboxStatusFilter}
               onChange={(e) => setInboxStatusFilter(e.target.value)}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-lg text-sm dark:bg-slate-700 dark:text-slate-200"
             >
               <option value="">All</option>
               <option value="new">New</option>
@@ -575,11 +575,11 @@ export default function OpsCenter() {
           </div>
 
           {loadingInbox ? (
-            <div className="py-8 flex items-center justify-center text-slate-500">
+            <div className="py-8 flex items-center justify-center text-slate-500 dark:text-slate-400">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : inboxItems.length === 0 ? (
-            <p className="text-sm text-slate-500">No inbox items yet. Run sync to ingest mentions/DMs.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No inbox items yet. Run sync to ingest mentions/DMs.</p>
           ) : (
             <div className="flex gap-4 max-h-[720px]">
               {/* Conversation List */}
@@ -592,23 +592,23 @@ export default function OpsCenter() {
                       key={thread.threadId}
                       onClick={() => loadThread(thread.threadId)}
                       className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                        isSelected ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:bg-slate-50'
+                        isSelected ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-500' : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          {item.sourceType === 'dm' ? <Mail size={12} className="text-slate-400" /> : <MessageSquare size={12} className="text-slate-400" />}
-                          <span className="text-xs font-medium text-slate-700">@{item.authorUsername || 'unknown'}</span>
+                          {item.sourceType === 'dm' ? <Mail size={12} className="text-slate-400 dark:text-slate-500" /> : <MessageSquare size={12} className="text-slate-400 dark:text-slate-500" />}
+                          <span className="text-xs font-medium text-slate-700 dark:text-slate-200">@{item.authorUsername || 'unknown'}</span>
                           {thread.hasMultiple && (
-                            <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 rounded-full">{thread.items.length}</span>
+                            <span className="text-[10px] bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 px-1.5 rounded-full">{thread.items.length}</span>
                           )}
                         </div>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${item.status === 'new' ? 'bg-blue-100 text-blue-700 font-medium' : 'bg-slate-100 text-slate-500'}`}>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${item.status === 'new' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
                           {item.status}
                         </span>
                       </div>
-                      <p className="text-sm text-slate-800 line-clamp-2">{item.text}</p>
-                      <span className="text-[10px] text-slate-400">{new Date(item.receivedAt).toLocaleString()}</span>
+                      <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-2">{item.text}</p>
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(item.receivedAt).toLocaleString()}</span>
                     </div>
                   );
                 })}
@@ -616,23 +616,23 @@ export default function OpsCenter() {
 
               {/* Conversation Detail */}
               {selectedThread && (
-                <div className="flex-1 border border-slate-200 rounded-lg flex flex-col">
-                  <div className="p-3 border-b border-slate-100 flex items-center justify-between bg-slate-50 rounded-t-lg">
-                    <h4 className="text-sm font-medium text-slate-700">Thread</h4>
-                    <button onClick={() => setSelectedThread(null)} className="text-xs text-slate-500 hover:text-slate-700">Close</button>
+                <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-lg flex flex-col">
+                  <div className="p-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900 rounded-t-lg">
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200">Thread</h4>
+                    <button onClick={() => setSelectedThread(null)} className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">Close</button>
                   </div>
 
                   {loadingThread ? (
-                    <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>
+                    <div className="flex-1 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-slate-400 dark:text-slate-500" /></div>
                   ) : (
                     <div className="flex-1 overflow-y-auto p-3 space-y-3">
                       {threadMessages.map((msg) => (
                         <div key={msg.id} className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-slate-700">@{msg.author_username || 'unknown'}</span>
-                            <span className="text-[10px] text-slate-400">{new Date(msg.received_at * 1000).toLocaleString()}</span>
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-200">@{msg.author_username || 'unknown'}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">{new Date(msg.received_at * 1000).toLocaleString()}</span>
                           </div>
-                          <p className="text-sm text-slate-900 whitespace-pre-wrap bg-slate-50 rounded-lg p-2">{msg.text}</p>
+                          <p className="text-sm text-slate-900 dark:text-slate-100 whitespace-pre-wrap bg-slate-50 dark:bg-slate-900 rounded-lg p-2">{msg.text}</p>
                         </div>
                       ))}
                     </div>
@@ -645,27 +645,27 @@ export default function OpsCenter() {
 
                     if (item.sourceType === 'mention') {
                       return (
-                        <div className="p-3 border-t border-slate-100 space-y-2">
+                        <div className="p-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
                           <div className="flex items-start gap-2">
                             <textarea
                               value={replyDrafts[item.id] || ''}
                               onChange={(event) => setReplyDrafts((prev) => ({ ...prev, [item.id]: event.target.value }))}
                               placeholder="Reply to thread..."
-                              className="flex-1 p-2 border border-slate-300 rounded-md text-sm"
+                              className="flex-1 p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                               rows={2}
                             />
                             {savedReplies.length > 0 && (
                               <div className="relative group">
-                                <button className="px-2 py-2 border border-slate-300 rounded-md text-xs hover:bg-slate-50 whitespace-nowrap">Quick</button>
-                                <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 w-48 hidden group-hover:block max-h-48 overflow-y-auto">
+                                <button className="px-2 py-2 border border-slate-300 dark:border-slate-600 rounded-md text-xs hover:bg-slate-50 dark:hover:bg-slate-700 whitespace-nowrap dark:text-slate-200">Quick</button>
+                                <div className="absolute right-0 top-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-20 w-48 hidden group-hover:block max-h-48 overflow-y-auto">
                                   {savedReplies.map((sr) => (
                                     <button
                                       key={sr.id}
                                       onClick={() => insertSavedReply(item.id, sr.text, sr.id, false)}
-                                      className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                                      className="block w-full text-left px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700 last:border-0"
                                     >
-                                      <span className="font-medium">{sr.name}</span>
-                                      <p className="text-slate-500 truncate">{sr.text}</p>
+                                      <span className="font-medium dark:text-slate-200">{sr.name}</span>
+                                      <p className="text-slate-500 dark:text-slate-400 truncate">{sr.text}</p>
                                     </button>
                                   ))}
                                 </div>
@@ -681,28 +681,28 @@ export default function OpsCenter() {
                               {workingId === `reply-${item.id}` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send size={12} />}
                               Reply
                             </button>
-                            <button onClick={() => runEngagementAction('like', item)} disabled={workingId === `like-${item.id}`} className="inline-flex items-center gap-1 px-2 py-1.5 border border-slate-300 rounded-md text-xs hover:bg-slate-50 disabled:opacity-50">
+                            <button onClick={() => runEngagementAction('like', item)} disabled={workingId === `like-${item.id}`} className="inline-flex items-center gap-1 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-md text-xs hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200">
                               <ThumbsUp size={12} /> Like
                             </button>
-                            <button onClick={() => runEngagementAction('repost', item)} disabled={workingId === `repost-${item.id}`} className="inline-flex items-center gap-1 px-2 py-1.5 border border-slate-300 rounded-md text-xs hover:bg-slate-50 disabled:opacity-50">
+                            <button onClick={() => runEngagementAction('repost', item)} disabled={workingId === `repost-${item.id}`} className="inline-flex items-center gap-1 px-2 py-1.5 border border-slate-300 dark:border-slate-600 rounded-md text-xs hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200">
                               <Repeat2 size={12} /> Repost
                             </button>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => updateInboxStatus(item, 'reviewed')} disabled={workingId === `status-${item.id}`} className="text-xs px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50">Mark Reviewed</button>
-                            <button onClick={() => updateInboxStatus(item, 'dismissed')} disabled={workingId === `status-${item.id}`} className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50">Dismiss</button>
+                            <button onClick={() => updateInboxStatus(item, 'reviewed')} disabled={workingId === `status-${item.id}`} className="text-xs px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200">Mark Reviewed</button>
+                            <button onClick={() => updateInboxStatus(item, 'dismissed')} disabled={workingId === `status-${item.id}`} className="text-xs px-2 py-1 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50">Dismiss</button>
                           </div>
                         </div>
                       );
                     }
 
                     return (
-                      <div className="p-3 border-t border-slate-100 space-y-2">
+                      <div className="p-3 border-t border-slate-100 dark:border-slate-700 space-y-2">
                         <textarea
                           value={dmDrafts[item.id] || ''}
                           onChange={(event) => setDmDrafts((prev) => ({ ...prev, [item.id]: event.target.value }))}
                           placeholder="Reply to DM..."
-                          className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                          className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                           rows={2}
                         />
                         <button
@@ -723,9 +723,9 @@ export default function OpsCenter() {
         </section>
 
         <section className="space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-slate-900 inline-flex items-center gap-2 mb-3">
-              <Sparkles size={18} className="text-slate-700" />
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 inline-flex items-center gap-2 mb-3">
+              <Sparkles size={18} className="text-slate-700 dark:text-slate-200" />
               Campaigns
             </h3>
 
@@ -735,19 +735,19 @@ export default function OpsCenter() {
                 value={campaignName}
                 onChange={(event) => setCampaignName(event.target.value)}
                 placeholder="Campaign name"
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
               />
               <textarea
                 value={campaignObjective}
                 onChange={(event) => setCampaignObjective(event.target.value)}
                 placeholder="Campaign objective"
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                 rows={2}
               />
               <button
                 onClick={createCampaign}
                 disabled={workingId === 'campaign-create'}
-                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800 disabled:opacity-50"
+                className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 bg-slate-900 dark:bg-slate-600 text-white rounded-md text-sm hover:bg-slate-800 dark:hover:bg-slate-500 disabled:opacity-50"
               >
                 {workingId === 'campaign-create' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles size={14} />}
                 <span>Create Campaign</span>
@@ -755,23 +755,23 @@ export default function OpsCenter() {
             </div>
 
             {loadingCampaigns ? (
-              <div className="py-4 text-slate-500 text-sm">Loading campaigns...</div>
+              <div className="py-4 text-slate-500 dark:text-slate-400 text-sm">Loading campaigns...</div>
             ) : campaigns.length === 0 ? (
-              <p className="text-sm text-slate-500">No campaigns yet.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No campaigns yet.</p>
             ) : (
               <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
                 {campaigns.map((campaign) => (
-                  <div key={campaign.id} className="border border-slate-200 rounded-md p-3 space-y-2">
+                  <div key={campaign.id} className="border border-slate-200 dark:border-slate-700 rounded-md p-3 space-y-2">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-slate-900">{campaign.name}</p>
-                      <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-700 capitalize">{campaign.status}</span>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{campaign.name}</p>
+                      <span className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 capitalize">{campaign.status}</span>
                     </div>
-                    <p className="text-xs text-slate-600">{campaign.objective}</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-300">{campaign.objective}</p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => buildCampaignPlan(campaign.id)}
                         disabled={workingId === `plan-${campaign.id}`}
-                        className="text-xs px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+                        className="text-xs px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200"
                       >
                         {workingId === `plan-${campaign.id}` ? 'Planning...' : 'Plan + Save Tasks'}
                       </button>
@@ -779,7 +779,7 @@ export default function OpsCenter() {
                         <button
                           onClick={() => setCampaignStatus(campaign, 'active')}
                           disabled={workingId === `campaign-status-${campaign.id}`}
-                          className="text-xs px-2 py-1 border border-green-300 text-green-700 rounded-md hover:bg-green-50 disabled:opacity-50"
+                          className="text-xs px-2 py-1 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50"
                         >
                           Activate
                         </button>
@@ -787,7 +787,7 @@ export default function OpsCenter() {
                         <button
                           onClick={() => setCampaignStatus(campaign, 'paused')}
                           disabled={workingId === `campaign-status-${campaign.id}`}
-                          className="text-xs px-2 py-1 border border-amber-300 text-amber-700 rounded-md hover:bg-amber-50 disabled:opacity-50"
+                          className="text-xs px-2 py-1 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400 rounded-md hover:bg-amber-50 dark:hover:bg-amber-900/30 disabled:opacity-50"
                         >
                           Pause
                         </button>
@@ -799,44 +799,44 @@ export default function OpsCenter() {
             )}
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
-            <h3 className="text-lg font-semibold text-slate-900 inline-flex items-center gap-2 mb-3">
-              <ClipboardCheck size={18} className="text-slate-700" />
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 inline-flex items-center gap-2 mb-3">
+              <ClipboardCheck size={18} className="text-slate-700 dark:text-slate-200" />
               Approvals
             </h3>
 
             <button
               onClick={loadApprovals}
               disabled={loadingApprovals}
-              className="mb-3 text-sm px-2 py-1 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50"
+              className="mb-3 text-sm px-2 py-1 border border-slate-300 dark:border-slate-600 rounded-md hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 dark:text-slate-200"
             >
               {loadingApprovals ? 'Loading...' : 'Refresh Approvals'}
             </button>
 
             {pendingApprovals.length === 0 ? (
-              <p className="text-sm text-slate-500">No pending approvals.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No pending approvals.</p>
             ) : (
               <div className="space-y-3 max-h-[260px] overflow-y-auto pr-1">
                 {pendingApprovals.map((approval) => (
-                  <div key={approval.id} className="border border-slate-200 rounded-md p-3 space-y-2">
-                    <div className="text-xs text-slate-600">
+                  <div key={approval.id} className="border border-slate-200 dark:border-slate-700 rounded-md p-3 space-y-2">
+                    <div className="text-xs text-slate-600 dark:text-slate-300">
                       Campaign {approval.campaignId} • Task {approval.taskId ?? 'n/a'}
                     </div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
                       Requested by {approval.requestedBy} at {new Date(approval.requestedAt).toLocaleString()}
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => decideApproval(approval, 'approved')}
                         disabled={workingId === `approval-${approval.id}`}
-                        className="text-xs px-2 py-1 border border-green-300 text-green-700 rounded-md hover:bg-green-50 disabled:opacity-50"
+                        className="text-xs px-2 py-1 border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => decideApproval(approval, 'rejected')}
                         disabled={workingId === `approval-${approval.id}`}
-                        className="text-xs px-2 py-1 border border-red-300 text-red-700 rounded-md hover:bg-red-50 disabled:opacity-50"
+                        className="text-xs px-2 py-1 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
                       >
                         Reject
                       </button>
@@ -854,25 +854,25 @@ export default function OpsCenter() {
       {/* Saved Replies Manager Modal */}
       {showSavedRepliesManager && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Saved Quick Replies</h3>
-              <button onClick={() => setShowSavedRepliesManager(false)} className="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Saved Quick Replies</h3>
+              <button onClick={() => setShowSavedRepliesManager(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-xl">&times;</button>
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-4 mb-4 space-y-2">
+            <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 mb-4 space-y-2">
               <input
                 type="text"
                 value={newReplyName}
                 onChange={(e) => setNewReplyName(e.target.value)}
                 placeholder="Reply name (e.g. 'Thank you')"
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
               />
               <textarea
                 value={newReplyText}
                 onChange={(e) => setNewReplyText(e.target.value)}
                 placeholder="Reply text..."
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                 rows={2}
               />
               <input
@@ -880,29 +880,29 @@ export default function OpsCenter() {
                 value={newReplyCategory}
                 onChange={(e) => setNewReplyCategory(e.target.value)}
                 placeholder="Category (optional)"
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
               />
               <button
                 onClick={createSavedReply}
                 disabled={!newReplyName.trim() || !newReplyText.trim()}
-                className="px-4 py-2 bg-slate-900 text-white rounded-md text-sm hover:bg-slate-800 disabled:opacity-50"
+                className="px-4 py-2 bg-slate-900 dark:bg-slate-600 text-white rounded-md text-sm hover:bg-slate-800 dark:hover:bg-slate-500 disabled:opacity-50"
               >
                 Add Reply
               </button>
             </div>
 
             {savedReplies.length === 0 ? (
-              <p className="text-sm text-slate-500">No saved replies yet.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">No saved replies yet.</p>
             ) : (
               <div className="space-y-2">
                 {savedReplies.map((reply) => (
-                  <div key={reply.id} className="border border-slate-200 rounded-lg p-3 flex items-start justify-between">
+                  <div key={reply.id} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex items-start justify-between">
                     <div>
-                      <p className="text-sm font-medium text-slate-900">{reply.name}</p>
-                      <p className="text-xs text-slate-600 mt-1">{reply.text}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{reply.name}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">{reply.text}</p>
                       <div className="flex gap-2 mt-1">
-                        {reply.category && <span className="text-[10px] bg-slate-100 px-1.5 rounded">{reply.category}</span>}
-                        <span className="text-[10px] text-slate-400">Used {reply.useCount}x</span>
+                        {reply.category && <span className="text-[10px] bg-slate-100 dark:bg-slate-700 px-1.5 rounded dark:text-slate-300">{reply.category}</span>}
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500">Used {reply.useCount}x</span>
                       </div>
                     </div>
                     <button

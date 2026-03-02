@@ -293,7 +293,7 @@ export default function SystemPromptManager({
     return (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">
             System Prompt
           </label>
           <button
@@ -320,7 +320,7 @@ export default function SystemPromptManager({
                   }
                 }
               }}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-200"
             >
               <option value="">Select a saved prompt...</option>
               {prompts.map((prompt) => (
@@ -331,23 +331,23 @@ export default function SystemPromptManager({
             </select>
             
             {selectedPrompt && (
-              <div className="text-sm text-gray-700 p-4 bg-gray-50 border rounded-lg">
-                <div className="font-medium text-gray-900 mb-2">
-                  {selectedPrompt.name} {selectedPrompt.isDefault && <span className="text-yellow-600">(Default)</span>}
+              <div className="text-sm text-gray-700 dark:text-slate-200 p-4 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-lg">
+                <div className="font-medium text-gray-900 dark:text-slate-100 mb-2">
+                  {selectedPrompt.name} {selectedPrompt.isDefault && <span className="text-yellow-600 dark:text-yellow-400">(Default)</span>}
                 </div>
-                <div className="whitespace-pre-wrap text-gray-600 leading-relaxed">
+                <div className="whitespace-pre-wrap text-gray-600 dark:text-slate-300 leading-relaxed">
                   {truncateText(selectedPrompt.prompt, 400)}
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="text-center py-6 px-4 bg-gray-50 border rounded-lg">
-            <div className="text-gray-500 mb-3">
-              <Settings size={32} className="mx-auto mb-2 text-gray-400" />
+          <div className="text-center py-6 px-4 bg-gray-50 dark:bg-slate-900 border dark:border-slate-700 rounded-lg">
+            <div className="text-gray-500 dark:text-slate-400 mb-3">
+              <Settings size={32} className="mx-auto mb-2 text-gray-400 dark:text-slate-500" />
               <p className="text-sm">No saved prompts found</p>
             </div>
-            <p className="text-xs text-gray-600 mb-4">
+            <p className="text-xs text-gray-600 dark:text-slate-300 mb-4">
               Create and save your system prompts to quickly reuse them across different contexts.
             </p>
             <button
@@ -362,7 +362,7 @@ export default function SystemPromptManager({
 
         {showManager && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden">
               <SystemPromptManager
                 selectedPromptId={selectedPromptId}
                 onPromptSelect={onPromptSelect}
@@ -370,13 +370,13 @@ export default function SystemPromptManager({
                 currentPrompt={currentPrompt}
                 isEmbedded={false}
               />
-              <div className="p-4 border-t">
+              <div className="p-4 border-t dark:border-slate-700">
                 <button
                   onClick={() => {
                     setShowManager(false);
                     window.location.reload();
                   }}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="px-4 py-2 bg-gray-600 dark:bg-slate-600 text-white rounded-lg hover:bg-gray-700 dark:hover:bg-slate-500 transition-colors"
                 >
                   Close
                 </button>
@@ -392,7 +392,7 @@ export default function SystemPromptManager({
   return (
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold text-gray-900">System Prompt Manager</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">System Prompt Manager</h2>
         <button
           onClick={() => setShowCreateForm(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -404,25 +404,25 @@ export default function SystemPromptManager({
 
       {/* Messages */}
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
+        <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
       {success && (
-        <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
+        <div className="p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300">
           {success}
         </div>
       )}
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-slate-500" size={20} />
         <input
           type="text"
           placeholder="Search prompts..."
           value={searchTerm}
           onChange={(e) => handleSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
         />
       </div>
 
@@ -430,11 +430,11 @@ export default function SystemPromptManager({
       <div className="space-y-4">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="animate-spin h-6 w-6 text-gray-400" />
-            <span className="ml-2 text-gray-600">Loading prompts...</span>
+            <Loader2 className="animate-spin h-6 w-6 text-gray-400 dark:text-slate-500" />
+            <span className="ml-2 text-gray-600 dark:text-slate-300">Loading prompts...</span>
           </div>
         ) : filteredPrompts.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-gray-500 dark:text-slate-400">
             {searchTerm ? 'No prompts found matching your search.' : 'No prompts found. Create your first prompt!'}
           </div>
         ) : (
@@ -442,28 +442,28 @@ export default function SystemPromptManager({
             <div
               key={prompt.id}
               className={`border rounded-lg p-4 transition-all ${
-                selectedPromptId === prompt.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                selectedPromptId === prompt.id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 dark:border-blue-400' : 'border-gray-200 dark:border-slate-700'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
-                    <h3 className="font-medium text-gray-900">{prompt.name}</h3>
+                    <h3 className="font-medium text-gray-900 dark:text-slate-100">{prompt.name}</h3>
                     {prompt.isDefault && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300">
                         <Star size={12} className="mr-1" />
                         Default
                       </span>
                     )}
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-slate-400">
                       <Calendar size={12} className="inline mr-1" />
                       {formatDate(prompt.createdAt)}
                     </span>
                   </div>
                   
-                  <div className="text-sm text-gray-600 mb-3">
+                  <div className="text-sm text-gray-600 dark:text-slate-300 mb-3">
                     {expandedPromptId === prompt.id ? (
-                      <div className="whitespace-pre-wrap bg-gray-50 p-3 rounded border">
+                      <div className="whitespace-pre-wrap bg-gray-50 dark:bg-slate-900 p-3 rounded border dark:border-slate-700">
                         {prompt.prompt}
                       </div>
                     ) : (
@@ -485,7 +485,7 @@ export default function SystemPromptManager({
                     
                     <button
                       onClick={() => handleCopyPrompt(prompt)}
-                      className="flex items-center space-x-1 text-gray-600 hover:text-gray-800"
+                      className="flex items-center space-x-1 text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100"
                     >
                       <Copy size={14} />
                       <span>Copy</span>
@@ -505,7 +505,7 @@ export default function SystemPromptManager({
                   {!prompt.isDefault && (
                     <button
                       onClick={() => handleSetDefault(prompt.id)}
-                      className="p-1 text-gray-400 hover:text-yellow-600"
+                      className="p-1 text-gray-400 dark:text-slate-500 hover:text-yellow-600 dark:hover:text-yellow-400"
                       title="Set as default"
                     >
                       <StarOff size={16} />
@@ -514,7 +514,7 @@ export default function SystemPromptManager({
                   
                   <button
                     onClick={() => handleEditPrompt(prompt)}
-                    className="p-1 text-gray-400 hover:text-blue-600"
+                    className="p-1 text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
                     title="Edit prompt"
                   >
                     <Edit size={16} />
@@ -522,7 +522,7 @@ export default function SystemPromptManager({
                   
                   <button
                     onClick={() => handleDeletePrompt(prompt.id)}
-                    className="p-1 text-gray-400 hover:text-red-600"
+                    className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400"
                     title="Delete prompt"
                   >
                     <Trash2 size={16} />
@@ -537,15 +537,15 @@ export default function SystemPromptManager({
       {/* Create/Edit Form Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold">
+                <h3 className="text-lg font-semibold dark:text-slate-100">
                   {editingPrompt ? 'Edit Prompt' : 'Create New Prompt'}
                 </h3>
                 <button
                   onClick={handleCancelEdit}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
                 >
                   <X size={24} />
                 </button>
@@ -553,7 +553,7 @@ export default function SystemPromptManager({
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                     Name
                   </label>
                   <input
@@ -561,12 +561,12 @@ export default function SystemPromptManager({
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Enter prompt name..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
                     Prompt
                   </label>
                   <textarea
@@ -574,7 +574,7 @@ export default function SystemPromptManager({
                     onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
                     placeholder="Enter your system prompt..."
                     rows={8}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400"
                   />
                 </div>
 
@@ -586,7 +586,7 @@ export default function SystemPromptManager({
                     onChange={(e) => setFormData({ ...formData, isDefault: e.target.checked })}
                     className="h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
                   />
-                  <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700">
+                  <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700 dark:text-slate-200">
                     Set as default prompt
                   </label>
                 </div>
@@ -594,7 +594,7 @@ export default function SystemPromptManager({
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     onClick={handleCancelEdit}
-                    className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                    className="px-4 py-2 text-gray-700 dark:text-slate-200 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                   >
                     Cancel
                   </button>

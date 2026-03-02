@@ -9,6 +9,7 @@ import { Grid } from '@giphy/react-components';
 import type { IGif } from '@giphy/js-types';
 import ThreadComposer from './ThreadComposer';
 import AiWriter from './AiWriter';
+import { useToast } from './ui/Toast';
 
 // Add Giphy API instance
 const gf = new GiphyFetch(process.env.NEXT_PUBLIC_GIPHY_API_KEY || '__REMOVED__');
@@ -145,6 +146,7 @@ const getMediaCount = (post: ScheduledPost) => {
 };
 
 export default function Scheduler({ onUpdate, refreshTrigger, compact = false }: SchedulerProps) {
+  const { toast } = useToast();
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledPost[]>([]);
   const [communityTags, setCommunityTags] = useState<CommunityTag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -657,6 +659,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         await fetchScheduledPosts();
         setShowCreateForm(false);
         resetForm();
+        toast({ variant: 'success', title: editingPost ? 'Post updated' : 'Post scheduled' });
         // Only call onUpdate for new posts, not edits, to prevent unnecessary parent refreshes
         if (!editingPost) {
           onUpdate?.();
@@ -672,7 +675,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       }
     } catch (error) {
       console.error('Error saving post:', error);
-      alert('Failed to save post. Please try again.');
+      toast({ variant: 'error', title: 'Save failed', description: 'Failed to save post. Please try again.' });
     } finally {
       setIsSubmitting(false);
     }
@@ -703,7 +706,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       }
     } catch (error) {
       console.error('Error deleting post:', error);
-      alert('Failed to delete post. Please try again.');
+      toast({ variant: 'error', title: 'Delete failed', description: 'Failed to delete post. Please try again.' });
     }
   }, []);
 
@@ -741,7 +744,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       }
     } catch (error) {
       console.error('Error deleting all posts:', error);
-      alert('Failed to delete all posts. Please try again.');
+      toast({ variant: 'error', title: 'Delete failed', description: 'Failed to delete all posts. Please try again.' });
     }
   }, [scheduledPosts.length]);
 
@@ -774,7 +777,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       }
     } catch (error) {
       console.error('Error saving tag:', error);
-      alert('Failed to save tag. Please try again.');
+      toast({ variant: 'error', title: 'Tag save failed', description: 'Failed to save tag. Please try again.' });
     } finally {
       setIsSavingTag(false);
     }
@@ -795,7 +798,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       }
     } catch (error) {
       console.error('Error deleting tag:', error);
-      alert('Failed to delete tag. Please try again.');
+      toast({ variant: 'error', title: 'Tag delete failed', description: 'Failed to delete tag. Please try again.' });
     }
   };
 
@@ -816,7 +819,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       const allowedNewFiles = imageFiles.slice(0, availableSlots);
       
       if (imageFiles.length > availableSlots) {
-        alert(`You can only attach up to 4 images. ${imageFiles.length - availableSlots} files were not added.`);
+        toast({ variant: 'warning', title: 'Image limit', description: `Max 4 images. ${imageFiles.length - availableSlots} files were not added.` });
       }
       
       setAttachedImages(prev => [...prev, ...allowedNewFiles]);
@@ -827,7 +830,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
     e.preventDefault();
     
     if (attachedGifs.length >= 1) {
-      alert('You can only attach 1 GIF at a time.');
+      toast({ variant: 'warning', title: 'GIF limit', description: 'You can only attach 1 GIF at a time.' });
       return;
     }
     
@@ -860,8 +863,8 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       case 'scheduled': return 'bg-blue-100 text-blue-800';
       case 'posted': return 'bg-green-100 text-green-800';
       case 'failed': return 'bg-red-100 text-red-800';
-      case 'cancelled': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'cancelled': return 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100';
+      default: return 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-100';
     }
   };
 
@@ -878,8 +881,8 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="animate-spin h-8 w-8 text-gray-400" />
-        <span className="ml-3 text-gray-600">Loading scheduler...</span>
+        <Loader2 className="animate-spin h-8 w-8 text-gray-400 dark:text-slate-500" />
+        <span className="ml-3 text-gray-600 dark:text-slate-300">Loading scheduler...</span>
       </div>
     );
   }
@@ -918,7 +921,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           <button
             onClick={() => setShowManageTags(true)}
-            className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors w-full sm:w-auto"
+            className="flex items-center justify-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors w-full sm:w-auto"
           >
             <Tag size={16} />
             <span>Manage Tags</span>
@@ -982,13 +985,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search posts..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
               />
             </div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
             >
               <option value="">All statuses</option>
               <option value="scheduled">Scheduled</option>
@@ -999,14 +1002,14 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
             <button
               onClick={() => { setBulkMode(!bulkMode); setSelectedPostIds(new Set()); }}
               className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                bulkMode ? 'bg-slate-900 text-white' : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                bulkMode ? 'bg-slate-900 text-white' : 'bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800'
               }`}
             >
               {bulkMode ? 'Cancel Bulk' : 'Bulk Select'}
             </button>
             {bulkMode && selectedPostIds.size > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">{selectedPostIds.size} selected</span>
+                <span className="text-sm text-gray-600 dark:text-slate-300">{selectedPostIds.size} selected</span>
                 <button onClick={() => handleBulkAction('cancel')} className="px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded-lg text-xs font-medium hover:bg-yellow-200">Cancel</button>
                 <button onClick={() => handleBulkAction('delete')} className="px-3 py-1.5 bg-red-100 text-red-800 rounded-lg text-xs font-medium hover:bg-red-200">Delete</button>
               </div>
@@ -1019,9 +1022,9 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       <div className={compact ? "overflow-hidden" : "dashboard-card overflow-hidden"}>
         {/* Calendar Header */}
         {!compact && (
-        <div className="bg-gray-50 px-4 sm:px-6 py-4 border-b border-gray-200">
+        <div className="bg-gray-50 dark:bg-slate-900 px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">
               {viewMode === 'day' && currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               {viewMode === 'week' && `Week of ${formatDateForDisplay(weekDays[0])}`}
               {viewMode === 'month' && currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
@@ -1029,7 +1032,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
             </h3>
             <div className="flex items-center gap-3">
               {/* View mode toggle */}
-              <div className="flex bg-white border border-slate-200 rounded-lg p-0.5">
+              <div className="flex bg-white dark:bg-slate-800 border border-slate-200 rounded-lg p-0.5">
                 {(['day', 'week', 'month', 'queue'] as CalendarViewMode[]).map((mode) => (
                   <button
                     key={mode}
@@ -1045,13 +1048,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 ))}
               </div>
               <div className="flex items-center space-x-1">
-                <button onClick={navigatePrev} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                <button onClick={navigatePrev} className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-md transition-colors">
                   <ChevronLeft size={16} />
                 </button>
-                <button onClick={navigateToday} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                <button onClick={navigateToday} className="px-3 py-1 text-sm text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-md transition-colors">
                   Today
                 </button>
-                <button onClick={navigateNext} className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-md transition-colors">
+                <button onClick={navigateNext} className="p-2 text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-200 dark:hover:bg-slate-600 rounded-md transition-colors">
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -1098,7 +1101,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         {!compact && (
         <div className="block sm:hidden">
           {/* Mobile View - Stack days vertically */}
-          <div className="divide-y divide-gray-200">
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
             {weekDays.map((day, index) => {
               const dayPosts = getPostsForDate(day);
               const isToday = day.toDateString() === new Date().toDateString();
@@ -1106,11 +1109,11 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               return (
                 <div
                   key={index}
-                  className={`p-4 ${isToday ? 'bg-blue-50' : 'bg-white'}`}
+                  className={`p-4 ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800'}`}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className={`text-base font-medium ${
-                      isToday ? 'text-blue-600' : 'text-gray-900'
+                      isToday ? 'text-blue-600' : 'text-gray-900 dark:text-slate-100'
                     }`}>
                       {day.toLocaleDateString('en-US', {
                         weekday: 'long',
@@ -1120,7 +1123,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     </div>
                     <button
                       onClick={() => handleCreatePost(day)}
-                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                       title="Add post"
                     >
                       <Plus size={18} />
@@ -1133,10 +1136,10 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       {dayPosts.map((post) => (
                         <div
                           key={post.id}
-                          className="group relative p-3 bg-gray-50 rounded-lg border hover:bg-gray-100 transition-colors cursor-pointer"
+                          className="group relative p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-700 text-sm">
+                            <span className="font-medium text-gray-700 dark:text-slate-200 text-sm">
                               {formatTimeForDisplay(post.scheduledTime)}
                             </span>
                             <div className="flex items-center space-x-1">
@@ -1145,7 +1148,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                   e.stopPropagation();
                                   handleEditPost(post);
                                 }}
-                                className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                                className="p-1 text-gray-400 dark:text-slate-500 hover:text-blue-600 transition-colors"
                                 title="Edit"
                               >
                                 <Edit size={14} />
@@ -1156,7 +1159,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                 e.stopPropagation();
                                 handleDeletePost(post.id);
                               }}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                              className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={14} />
@@ -1164,7 +1167,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                             </div>
                           </div>
                           
-                          <div className="text-gray-600 mb-2 text-sm leading-relaxed">
+                          <div className="text-gray-600 dark:text-slate-300 mb-2 text-sm leading-relaxed">
                             {post.text.length > 80 ? `${post.text.slice(0, 80)}...` : post.text}
                           </div>
                           
@@ -1178,7 +1181,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                 Account #{post.accountSlot || 1}
                               </div>
                               {post.communityId && (
-                                <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                <div className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                                   {communityTags.find(tag => tag.communityId === post.communityId)?.tagName || 'Community'}
                                 </div>
                               )}
@@ -1189,7 +1192,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                               )}
                             </div>
                             {getMediaCount(post) > 0 && (
-                              <div className="text-gray-400 text-xs">
+                              <div className="text-gray-400 dark:text-slate-500 text-xs">
                                 📎 {getMediaCount(post)}
                               </div>
                             )}
@@ -1198,7 +1201,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-4 text-gray-500 text-sm">
+                    <div className="text-center py-4 text-gray-500 dark:text-slate-400 text-sm">
                       No posts scheduled
                     </div>
                   )}
@@ -1212,7 +1215,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         {/* Day View */}
         {!compact && viewMode === 'day' && (
           <div className="hidden sm:block">
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-slate-700">
               {getHourSlots().map((hour) => {
                 const hourPosts = getPostsForHour(currentDate, hour);
                 return (
@@ -1222,7 +1225,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     onDragOver={handleDragOver}
                     onDrop={() => handleDropOnDate(currentDate, hour)}
                   >
-                    <div className="w-16 flex-shrink-0 py-2 px-3 text-xs text-slate-500 font-medium border-r border-gray-200 bg-gray-50">
+                    <div className="w-16 flex-shrink-0 py-2 px-3 text-xs text-slate-500 font-medium border-r border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
                       {hour.toString().padStart(2, '0')}:00
                     </div>
                     <div className="flex-1 p-1 flex flex-wrap gap-1">
@@ -1240,11 +1243,11 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium">{formatTimeForDisplay(post.scheduledTime)}</span>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button onClick={() => handleEditPost(post)} className="p-1 text-gray-400 hover:text-blue-600"><Edit size={12} /></button>
-                              <button onClick={() => handleDeletePost(post.id)} className="p-1 text-gray-400 hover:text-red-600"><Trash2 size={12} /></button>
+                              <button onClick={() => handleEditPost(post)} className="p-1 text-gray-400 dark:text-slate-500 hover:text-blue-600"><Edit size={12} /></button>
+                              <button onClick={() => handleDeletePost(post.id)} className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600"><Trash2 size={12} /></button>
                             </div>
                           </div>
-                          <p className="text-gray-600 line-clamp-2">{post.text}</p>
+                          <p className="text-gray-600 dark:text-slate-300 line-clamp-2">{post.text}</p>
                           <div className="flex items-center gap-1 mt-1">
                             <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] ${getStatusColor(post.status)}`}>
                               {getStatusIcon(post.status)} {post.status}
@@ -1265,15 +1268,15 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         {!compact && viewMode === 'month' && (
           <div className="hidden sm:block">
             {/* Day headers */}
-            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+            <div className="grid grid-cols-7 border-b border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-                <div key={d} className="text-xs font-medium text-gray-600 text-center py-2">{d}</div>
+                <div key={d} className="text-xs font-medium text-gray-600 dark:text-slate-300 text-center py-2">{d}</div>
               ))}
             </div>
             <div className="grid grid-cols-7">
               {getMonthDays().map((day, idx) => {
                 if (!day) {
-                  return <div key={`pad-${idx}`} className="min-h-[80px] border-r border-b border-gray-200 bg-gray-50/50" />;
+                  return <div key={`pad-${idx}`} className="min-h-[80px] border-r border-b border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50" />;
                 }
                 const dayPosts = getPostsForDate(day);
                 const isToday = day.toDateString() === new Date().toDateString();
@@ -1281,7 +1284,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 return (
                   <div
                     key={day.toISOString()}
-                    className={`min-h-[80px] border-r border-b border-gray-200 p-1 ${isToday ? 'bg-blue-50' : ''} ${!isCurrentMonth ? 'opacity-50' : ''}`}
+                    className={`min-h-[80px] border-r border-b border-gray-200 dark:border-slate-700 p-1 ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''} ${!isCurrentMonth ? 'opacity-50' : ''}`}
                     onDragOver={handleDragOver}
                     onDrop={() => handleDropOnDate(day)}
                     onClick={() => {
@@ -1289,7 +1292,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                       setViewMode('day');
                     }}
                   >
-                    <div className={`text-xs font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`}>
+                    <div className={`text-xs font-medium mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700 dark:text-slate-200'}`}>
                       {day.getDate()}
                     </div>
                     {dayPosts.length > 0 && (
@@ -1314,7 +1317,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           </div>
                         ))}
                         {dayPosts.length > 3 && (
-                          <span className="text-[10px] text-gray-500 px-1">+{dayPosts.length - 3} more</span>
+                          <span className="text-[10px] text-gray-500 dark:text-slate-400 px-1">+{dayPosts.length - 3} more</span>
                         )}
                       </div>
                     )}
@@ -1336,21 +1339,21 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               return (
                 <div
                   key={index}
-                  className={`min-h-32 border-r border-b border-gray-200 p-2 ${
-                    isToday ? 'bg-blue-50' : 'bg-white'
+                  className={`min-h-32 border-r border-b border-gray-200 dark:border-slate-700 p-2 ${
+                    isToday ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800'
                   } last:border-r-0`}
                   onDragOver={handleDragOver}
                   onDrop={() => handleDropOnDate(day)}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className={`text-sm font-medium ${
-                      isToday ? 'text-blue-600' : 'text-gray-900'
+                      isToday ? 'text-blue-600' : 'text-gray-900 dark:text-slate-100'
                     }`}>
                       {formatDateForDisplay(day)}
                     </div>
                     <button
                       onClick={() => handleCreatePost(day)}
-                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      className="p-1 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors"
                       title="Add post"
                     >
                       <Plus size={14} />
@@ -1381,7 +1384,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                 e.stopPropagation();
                                 handleEditPost(post);
                               }}
-                              className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
+                              className="p-1 text-gray-400 dark:text-slate-500 hover:text-blue-600 transition-colors"
                               title="Edit"
                             >
                               <Edit size={12} />
@@ -1392,7 +1395,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                 e.stopPropagation();
                                 handleDeletePost(post.id);
                               }}
-                              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                              className="p-1 text-gray-400 dark:text-slate-500 hover:text-red-600 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={12} />
@@ -1400,7 +1403,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           </div>
                         </div>
                         
-                        <div className="text-gray-600 mb-1 line-clamp-2">
+                        <div className="text-gray-600 dark:text-slate-300 mb-1 line-clamp-2">
                           {post.text.length > 50 ? `${post.text.slice(0, 50)}...` : post.text}
                         </div>
                         
@@ -1416,13 +1419,13 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                               </div>
                             </div>
                             {getMediaCount(post) > 0 && (
-                              <div className="text-gray-400">
+                              <div className="text-gray-400 dark:text-slate-500">
                                 📎 {getMediaCount(post)}
                               </div>
                             )}
                           </div>
                           {post.communityId && (
-                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full self-start">
+                            <div className="text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full self-start">
                               {communityTags.find(tag => tag.communityId === post.communityId)?.tagName || 'Community'}
                             </div>
                           )}
@@ -1432,7 +1435,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                             </div>
                           )}
                           {post.status === 'posted' && post.metrics && (
-                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                            <div className="flex items-center gap-2 mt-1 text-xs text-gray-500 dark:text-slate-400">
                               <span title="Likes">♥ {post.metrics.likes}</span>
                               <span title="Retweets">⟲ {post.metrics.retweets}</span>
                               <span title="Impressions">👁 {post.metrics.impressions}</span>
@@ -1457,7 +1460,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               <select
                 value={queueSlot}
                 onChange={(e) => setQueueSlot(Number(e.target.value))}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
               >
                 <option value={1}>Account #1</option>
                 <option value={2}>Account #2</option>
@@ -1481,7 +1484,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 value={queueText}
                 onChange={(e) => setQueueText(e.target.value)}
                 placeholder="Write a post to add to the queue..."
-                className="flex-1 p-3 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 p-3 border border-gray-300 dark:border-slate-600 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                 rows={2}
               />
               <button
@@ -1495,7 +1498,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
             {/* Queue items list */}
             {queueItems.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 dark:text-slate-400">
                 <List size={32} className="mx-auto mb-3 opacity-50" />
                 <p className="text-sm font-medium">Queue is empty</p>
                 <p className="text-xs mt-1">Add posts above and click Auto-Schedule to assign optimal times.</p>
@@ -1505,22 +1508,22 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                 {queueItems.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                    className="flex items-start gap-3 p-3 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:border-gray-300 dark:hover:border-slate-600 transition-colors"
                   >
                     <span className="flex-shrink-0 w-6 h-6 bg-slate-100 text-slate-600 rounded-full flex items-center justify-center text-xs font-medium">
                       {index + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">{item.text}</p>
+                      <p className="text-sm text-gray-900 dark:text-slate-100 whitespace-pre-wrap break-words">{item.text}</p>
                       {item.communityId && (
-                        <span className="inline-block mt-1 text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        <span className="inline-block mt-1 text-xs text-blue-600 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">
                           {communityTags.find(t => t.communityId === item.communityId)?.tagName || 'Community'}
                         </span>
                       )}
                     </div>
                     <button
                       onClick={() => removeFromQueue(item.id)}
-                      className="flex-shrink-0 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className="flex-shrink-0 p-1 text-gray-400 dark:text-slate-500 hover:text-red-600 transition-colors"
                       title="Remove from queue"
                     >
                       <X size={14} />
@@ -1548,7 +1551,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     resetForm();
                   });
                 }}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
               >
                 <X size={24} />
               </button>
@@ -1578,7 +1581,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                         <button
                           type="button"
                           onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 rounded transition-colors"
                           title="Add emoji"
                         >
                           <Smile size={18} />
@@ -1608,7 +1611,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                             setGifSearchTerm('');
                             setShowGifPicker(!showGifPicker);
                           }}
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 rounded transition-colors"
                           title="Add GIF"
                           disabled={attachedGifs.length >= 1}
                         >
@@ -1617,12 +1620,12 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                         
                         {showGifPicker && (
                           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white rounded-lg p-4 w-full max-w-sm sm:max-w-md h-96 overflow-hidden">
+                            <div className="bg-white dark:bg-slate-800 rounded-lg p-4 w-full max-w-sm sm:max-w-md h-96 overflow-hidden">
                               <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">Choose a GIF</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Choose a GIF</h3>
                                 <button
                                   onClick={() => setShowGifPicker(false)}
-                                  className="text-gray-500 hover:text-gray-700"
+                                  className="text-gray-500 dark:text-slate-400 hover:text-gray-700"
                                 >
                                   <X size={18} />
                                 </button>
@@ -1634,7 +1637,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                   placeholder="Search GIFs..."
                                   value={gifSearchTerm}
                                   onChange={(e) => setGifSearchTerm(e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                                 />
                               </div>
                               
@@ -1664,7 +1667,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                         />
                         <label
                           htmlFor="image-upload-scheduler"
-                          className="p-2 text-gray-400 hover:text-gray-600 rounded transition-colors cursor-pointer inline-flex"
+                          className="p-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 rounded transition-colors cursor-pointer inline-flex"
                           title="Attach image"
                         >
                           <ImageIcon size={18} />
@@ -1688,14 +1691,14 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               {/* Attached Images */}
               {attachedImages.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Attached Images:</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">Attached Images:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {attachedImages.map((image, index) => (
                       <div key={index} className="relative group">
                         <img
                           src={imagePreviewUrls[index]}
                           alt={`Attached image ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-slate-700"
                         />
                         <button
                           type="button"
@@ -1713,14 +1716,14 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
               {/* Attached GIFs */}
               {attachedGifs.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-gray-700">Attached GIFs:</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-slate-200">Attached GIFs:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {attachedGifs.map((gifUrl, index) => (
                       <div key={index} className="relative group">
                         <img
                           src={gifUrl}
                           alt={`Attached GIF ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg border border-gray-200"
+                          className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-slate-700"
                         />
                         <button
                           type="button"
@@ -1865,20 +1868,20 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
       {/* Manage Tags Modal */}
       {showManageTags && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 sm:p-6 w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Manage Community Tags</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Manage Community Tags</h3>
               <button
                 onClick={() => setShowManageTags(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"
               >
                 <X size={24} />
               </button>
             </div>
 
             {/* Add New Tag */}
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Add New Tag</h4>
+            <div className="bg-gray-50 dark:bg-slate-900 rounded-lg p-4 mb-6">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">Add New Tag</h4>
               <div className="space-y-3">
                 <div>
                   <input
@@ -1886,7 +1889,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     value={newTagName}
                     onChange={(e) => setNewTagName(e.target.value)}
                     placeholder="Tag name (e.g., 'Web3', 'AI News')"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
@@ -1895,7 +1898,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     value={newCommunityId}
                     onChange={(e) => setNewCommunityId(e.target.value)}
                     placeholder="Community ID (from X/Twitter)"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
@@ -1904,7 +1907,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                     value={newCommunityName}
                     onChange={(e) => setNewCommunityName(e.target.value)}
                     placeholder="Community name (optional)"
-                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
                   />
                 </div>
                 <button
@@ -1924,16 +1927,16 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
             {/* Existing Tags */}
             <div>
-              <h4 className="text-sm font-medium text-gray-900 mb-3">Existing Tags</h4>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">Existing Tags</h4>
               {communityTags.length === 0 ? (
-                <p className="text-gray-500 text-sm">No tags created yet.</p>
+                <p className="text-gray-500 dark:text-slate-400 text-sm">No tags created yet.</p>
               ) : (
                 <div className="space-y-2">
                   {communityTags.map((tag) => (
-                    <div key={tag.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 rounded-lg gap-2">
+                    <div key={tag.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-gray-50 dark:bg-slate-900 rounded-lg gap-2">
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">{tag.tagName}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-gray-900 dark:text-slate-100">{tag.tagName}</div>
+                        <div className="text-sm text-gray-500 dark:text-slate-400">
                           ID: {tag.communityId}
                           {tag.communityName && ` • ${tag.communityName}`}
                         </div>
@@ -1971,9 +1974,9 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
         <div className="p-4 sm:p-6">
           {scheduledPosts.length === 0 ? (
             <div className="text-center py-8">
-              <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No scheduled posts</h3>
-              <p className="text-gray-500">
+              <Calendar className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">No scheduled posts</h3>
+              <p className="text-gray-500 dark:text-slate-400">
                 Create your first scheduled post to get started.
               </p>
             </div>
@@ -1993,7 +1996,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           <div className="text-sm text-indigo-700 bg-indigo-50 px-2 py-1 rounded-full">
                             Account #{post.accountSlot || 1}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-500 dark:text-slate-400">
                             {new Date(post.scheduledTime).toLocaleString()}
                           </div>
                           {post.communityId && (
@@ -2014,7 +2017,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           </div>
                         )}
                         {getMediaCount(post) > 0 && (
-                          <div className="text-sm text-gray-500 mb-2">
+                          <div className="text-sm text-gray-500 dark:text-slate-400 mb-2">
                             📎 {getMediaCount(post)} media file(s)
                           </div>
                         )}
@@ -2034,7 +2037,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                           <>
                             <button
                               onClick={() => handleEditPost(post)}
-                              className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 transition-colors"
                               title="Edit"
                             >
                               <Edit size={16} />
@@ -2044,7 +2047,7 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
                                 e.preventDefault();
                                 handleDeletePost(post.id);
                               }}
-                              className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                              className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 transition-colors"
                               title="Delete"
                             >
                               <Trash2 size={16} />
@@ -2062,24 +2065,35 @@ export default function Scheduler({ onUpdate, refreshTrigger, compact = false }:
 
       {/* Thread Composer Modal */}
       {showThreadComposer && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 dark:bg-black/60 overflow-y-auto pt-8 pb-8 px-4">
+        <div
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 dark:bg-black/60 overflow-y-auto pt-8 pb-8 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowThreadComposer(false); }}
+          onKeyDown={(e) => { if (e.key === 'Escape') setShowThreadComposer(false); }}
+        >
           <div className="w-full max-w-2xl">
             <ThreadComposer
-              accountSlot={selectedAccountSlot}
               onSubmit={async (tweets, scheduledTime) => {
-                const response = await fetch('/api/scheduler/thread', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    tweets: tweets.map(text => ({ text })),
-                    account_slot: selectedAccountSlot,
-                    scheduled_time: scheduledTime,
-                  }),
-                });
-                if (!response.ok) throw new Error('Failed to create thread');
-                setShowThreadComposer(false);
-                await fetchScheduledPosts();
-                onUpdate?.();
+                try {
+                  const response = await fetch('/api/scheduler/thread', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      tweets: tweets.map(text => ({ text })),
+                      account_slot: selectedAccountSlot,
+                      scheduled_time: scheduledTime,
+                    }),
+                  });
+                  if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || `Failed to create thread (${response.status})`);
+                  }
+                  setShowThreadComposer(false);
+                  toast({ variant: 'success', title: 'Thread scheduled', description: `${tweets.length} tweets queued` });
+                  await fetchScheduledPosts();
+                  onUpdate?.();
+                } catch (err) {
+                  toast({ variant: 'error', title: 'Thread failed', description: err instanceof Error ? err.message : 'Unknown error' });
+                }
               }}
               onCancel={() => setShowThreadComposer(false)}
               isSubmitting={isSubmitting}

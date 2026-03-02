@@ -226,22 +226,8 @@ export default function CommandPalette({
     },
   ];
 
-  // ------------------------------------------------------------------
-  // Keyboard shortcut registration: Cmd+K / Ctrl+K
-  // ------------------------------------------------------------------
-
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      // Open via Cmd+K or Ctrl+K
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        onOpenChange(!open);
-        return;
-      }
-    }
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onOpenChange]);
+  // Cmd+K / Ctrl+K is handled by the parent (page.tsx via useKeyboardShortcuts).
+  // No duplicate listener here — the parent controls the `open` prop.
 
   // ------------------------------------------------------------------
   // Reset state when palette opens/closes

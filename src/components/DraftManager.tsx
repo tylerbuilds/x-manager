@@ -210,12 +210,12 @@ export default function DraftManager() {
     <div className="space-y-6">
       {/* Error banner */}
       {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           <span className="mt-0.5 shrink-0">&#9888;</span>
           <span>{error}</span>
           <button
             onClick={() => setError('')}
-            className="ml-auto shrink-0 text-red-400 hover:text-red-600"
+            className="ml-auto shrink-0 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
             aria-label="Dismiss error"
           >
             &times;
@@ -224,8 +224,8 @@ export default function DraftManager() {
       )}
 
       {/* Create new draft */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
-        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 mb-3">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
+        <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100 mb-3">
           <Plus className="h-4 w-4 text-teal-600" />
           New Draft
         </h2>
@@ -234,16 +234,16 @@ export default function DraftManager() {
           onChange={(e) => setNewText(e.target.value)}
           placeholder="What's on your mind? Write a draft tweet..."
           rows={3}
-          className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+          className="w-full resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
         />
         <div className="mt-2 flex items-center justify-between">
-          <span className={`text-xs ${newText.length > 280 ? 'text-red-500' : 'text-slate-400'}`}>
+          <span className={`text-xs ${newText.length > 280 ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
             {newText.length} / 280
           </span>
           <button
             onClick={handleCreate}
             disabled={isSaving || !newText.trim()}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1.5 text-sm font-medium text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -256,13 +256,13 @@ export default function DraftManager() {
       </div>
 
       {/* Draft list */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-4 md:p-6">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
             <FileText className="h-4 w-4 text-teal-600" />
             Drafts
             {!isLoading && drafts.length > 0 && (
-              <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-normal text-slate-500">
+              <span className="ml-1 rounded-full bg-slate-100 dark:bg-slate-700 px-2 py-0.5 text-xs font-normal text-slate-500 dark:text-slate-400">
                 {drafts.length}
               </span>
             )}
@@ -270,7 +270,7 @@ export default function DraftManager() {
           <button
             onClick={fetchDrafts}
             disabled={isLoading}
-            className="text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50 transition-colors"
+            className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-50 transition-colors"
           >
             Refresh
           </button>
@@ -278,7 +278,7 @@ export default function DraftManager() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-12 text-slate-400">
+          <div className="flex items-center justify-center py-12 text-slate-400 dark:text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
             <span className="text-sm">Loading drafts...</span>
           </div>
@@ -286,9 +286,9 @@ export default function DraftManager() {
 
         {/* Empty state */}
         {!isLoading && drafts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-            <FileText className="h-10 w-10 mb-3 text-slate-300" />
-            <p className="text-sm font-medium text-slate-500">No drafts yet</p>
+          <div className="flex flex-col items-center justify-center py-12 text-slate-400 dark:text-slate-500">
+            <FileText className="h-10 w-10 mb-3 text-slate-300 dark:text-slate-600" />
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No drafts yet</p>
             <p className="text-xs mt-1">Write something above to save your first draft.</p>
           </div>
         )}
@@ -299,27 +299,27 @@ export default function DraftManager() {
             {drafts.map((draft) => (
               <li
                 key={draft.id}
-                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition-shadow hover:shadow-sm"
+                className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-4 transition-shadow hover:shadow-sm"
               >
                 {/* Text preview */}
-                <p className="text-sm text-slate-800 leading-relaxed mb-3 whitespace-pre-wrap break-words">
+                <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed mb-3 whitespace-pre-wrap break-words">
                   {truncate(draft.text, 120)}
                 </p>
 
                 {/* Meta row */}
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <span className="flex items-center gap-1 text-xs text-slate-400">
+                  <span className="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-500">
                     <Clock className="h-3 w-3" />
                     {formatRelativeDate(draft.createdAt)}
                   </span>
 
                   {draft.source && (
-                    <span className="rounded-full bg-teal-50 border border-teal-200 px-2 py-0.5 text-xs font-medium text-teal-700">
+                    <span className="rounded-full bg-teal-50 dark:bg-teal-900/50 border border-teal-200 dark:border-teal-700 px-2 py-0.5 text-xs font-medium text-teal-700 dark:text-teal-300">
                       {draft.source}
                     </span>
                   )}
 
-                  <span className="rounded-full bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs text-slate-500">
+                  <span className="rounded-full bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400">
                     Slot {draft.accountSlot}
                   </span>
                 </div>
@@ -329,7 +329,7 @@ export default function DraftManager() {
                   {/* Edit */}
                   <button
                     onClick={() => openEdit(draft)}
-                    className="flex items-center gap-1.5 rounded-md border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-md border border-slate-300 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
                     <Edit3 className="h-3.5 w-3.5" />
                     Edit
@@ -338,7 +338,7 @@ export default function DraftManager() {
                   {/* Schedule */}
                   <button
                     onClick={() => openSchedule(draft.id)}
-                    className="flex items-center gap-1.5 rounded-md border border-blue-300 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-50 transition-colors"
+                    className="flex items-center gap-1.5 rounded-md border border-blue-300 dark:border-blue-700 px-2.5 py-1 text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                   >
                     <Calendar className="h-3.5 w-3.5" />
                     Schedule
@@ -348,7 +348,7 @@ export default function DraftManager() {
                   <button
                     onClick={() => handleDelete(draft.id)}
                     disabled={deletingId === draft.id}
-                    className="ml-auto flex items-center gap-1.5 rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-400 hover:border-red-300 hover:text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                    className="ml-auto flex items-center gap-1.5 rounded-md border border-slate-200 dark:border-slate-600 px-2.5 py-1 text-xs font-medium text-slate-400 dark:text-slate-500 hover:border-red-300 dark:hover:border-red-700 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50 transition-colors"
                     aria-label="Delete draft"
                   >
                     {deletingId === draft.id ? (
@@ -361,8 +361,8 @@ export default function DraftManager() {
 
                 {/* Inline schedule picker */}
                 {schedulingId === draft.id && (
-                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                    <p className="text-xs font-medium text-blue-800 mb-2 flex items-center gap-1">
+                  <div className="mt-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 p-3">
+                    <p className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-1">
                       <Calendar className="h-3.5 w-3.5" />
                       Pick a date &amp; time to publish
                     </p>
@@ -371,12 +371,12 @@ export default function DraftManager() {
                         type="datetime-local"
                         value={scheduleDateTime}
                         onChange={(e) => setScheduleDateTime(e.target.value)}
-                        className="rounded-md border border-blue-300 bg-white px-2 py-1 text-xs text-slate-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="rounded-md border border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-800 px-2 py-1 text-xs text-slate-800 dark:text-slate-200 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                       <button
                         onClick={() => handleSchedule(draft)}
                         disabled={isScheduling || !scheduleDateTime}
-                        className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 px-3 py-1 text-xs font-medium text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         {isScheduling ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -388,7 +388,7 @@ export default function DraftManager() {
                       <button
                         onClick={closeSchedule}
                         disabled={isScheduling}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-50 transition-colors"
+                        className="rounded-md border border-slate-300 dark:border-slate-600 px-3 py-1 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                       >
                         Cancel
                       </button>
@@ -409,15 +409,15 @@ export default function DraftManager() {
             if (e.target === e.currentTarget) closeEdit();
           }}
         >
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <div className="w-full max-w-lg rounded-xl bg-white dark:bg-slate-800 shadow-xl">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 px-5 py-4">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100">
                 <Edit3 className="h-4 w-4 text-teal-600" />
                 Edit Draft
               </h3>
               <button
                 onClick={closeEdit}
-                className="text-slate-400 hover:text-slate-600 transition-colors text-lg leading-none"
+                className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors text-lg leading-none"
                 aria-label="Close"
               >
                 &times;
@@ -429,27 +429,27 @@ export default function DraftManager() {
                 value={editText}
                 onChange={(e) => setEditText(e.target.value)}
                 rows={6}
-                className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="w-full resize-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
               <div className="flex items-center justify-between">
-                <span className={`text-xs ${editText.length > 280 ? 'text-red-500' : 'text-slate-400'}`}>
+                <span className={`text-xs ${editText.length > 280 ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
                   {editText.length} / 280
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-slate-200 px-5 py-4">
+            <div className="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-700 px-5 py-4">
               <button
                 onClick={closeEdit}
                 disabled={isUpdating}
-                className="rounded-md border border-slate-300 px-4 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                className="rounded-md border border-slate-300 dark:border-slate-600 px-4 py-1.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdate}
                 disabled={isUpdating || !editText.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 px-4 py-1.5 text-sm font-medium text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isUpdating ? (
                   <Loader2 className="h-4 w-4 animate-spin" />

@@ -92,7 +92,7 @@ export default function Home() {
   };
 
   useKeyboardShortcuts([
-    { key: 'k', meta: true, handler: () => setCommandPaletteOpen(true), description: 'Open search', category: 'Navigation' },
+    { key: 'k', meta: true, handler: () => setCommandPaletteOpen((v: boolean) => !v), description: 'Open search', category: 'Navigation' },
   ]);
 
   const viewBody = useMemo(() => {

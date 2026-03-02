@@ -64,12 +64,12 @@ function formatNumber(n: number): string {
 
 function MetricCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm">
       <div className="flex items-center gap-3 mb-2">
         <div className={`p-2 rounded-lg ${color}`}>{icon}</div>
-        <span className="text-sm text-slate-600">{label}</span>
+        <span className="text-sm text-slate-600 dark:text-slate-300">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-slate-900">{typeof value === 'number' ? formatNumber(value) : value}</div>
+      <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{typeof value === 'number' ? formatNumber(value) : value}</div>
     </div>
   );
 }
@@ -123,8 +123,8 @@ export default function Analytics() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-        <span className="ml-3 text-slate-600">Loading analytics...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400 dark:text-slate-400" />
+        <span className="ml-3 text-slate-600 dark:text-slate-300">Loading analytics...</span>
       </div>
     );
   }
@@ -137,14 +137,14 @@ export default function Analytics() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-900">Analytics</h2>
-          <p className="text-sm text-slate-500">Track your X post performance and engagement trends.</p>
+          <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Analytics</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Track your X post performance and engagement trends.</p>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
-            className="p-2 border border-slate-300 rounded-lg text-sm"
+            className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm dark:bg-slate-800 dark:text-slate-200"
           >
             <option value={7}>Last 7 days</option>
             <option value={30}>Last 30 days</option>
@@ -152,7 +152,7 @@ export default function Analytics() {
           </select>
           <button
             onClick={loadData}
-            className="p-2 border border-slate-300 rounded-lg hover:bg-slate-50 text-slate-600"
+            className="p-2 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300"
           >
             <RefreshCw size={16} />
           </button>
@@ -196,10 +196,10 @@ export default function Analytics() {
       </div>
 
       {/* Daily Engagement Trend - CSS Bar Chart */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">Daily Engagement Trend</h3>
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Daily Engagement Trend</h3>
         {timeseries.length === 0 ? (
-          <p className="text-sm text-slate-500 py-8 text-center">No data yet. Metrics are collected automatically for posted tweets.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 py-8 text-center">No data yet. Metrics are collected automatically for posted tweets.</p>
         ) : (
           <div className="flex items-end gap-1 h-48 overflow-x-auto pb-6 relative">
             {timeseries.map((point) => {
@@ -216,7 +216,7 @@ export default function Analytics() {
                       {point.day}: {point.engagement} eng, {point.post_count} posts
                     </div>
                   </div>
-                  <span className="text-[10px] text-slate-400 mt-1 rotate-[-45deg] origin-top-left whitespace-nowrap">
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 rotate-[-45deg] origin-top-left whitespace-nowrap">
                     {point.day.slice(5)}
                   </span>
                 </div>
@@ -228,26 +228,26 @@ export default function Analytics() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Top Performing Posts */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Performing Posts</h3>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4">Top Performing Posts</h3>
           {topPosts.length === 0 ? (
-            <p className="text-sm text-slate-500 py-4 text-center">No posted tweets with metrics yet.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">No posted tweets with metrics yet.</p>
           ) : (
             <div className="space-y-3 max-h-[400px] overflow-y-auto">
               {topPosts.map((post, idx) => (
-                <div key={post.id} className="border border-slate-100 rounded-lg p-3">
+                <div key={post.id} className="border border-slate-100 dark:border-slate-700 rounded-lg p-3">
                   <div className="flex items-start gap-2 mb-2">
-                    <span className="text-xs font-bold text-slate-400 bg-slate-100 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0">
                       {idx + 1}
                     </span>
-                    <p className="text-sm text-slate-800 line-clamp-2">{post.text}</p>
+                    <p className="text-sm text-slate-800 dark:text-slate-200 line-clamp-2">{post.text}</p>
                   </div>
-                  <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-500 dark:text-slate-400">
                     <span className="inline-flex items-center gap-1"><Eye size={12} /> {formatNumber(post.impressions)}</span>
                     <span className="inline-flex items-center gap-1"><Heart size={12} className="text-rose-400" /> {post.likes}</span>
                     <span className="inline-flex items-center gap-1"><Repeat2 size={12} className="text-green-400" /> {post.retweets}</span>
                     <span className="inline-flex items-center gap-1"><MessageSquare size={12} className="text-blue-400" /> {post.replies}</span>
-                    <span className="font-medium text-teal-700">{post.engagementRate}% ER</span>
+                    <span className="font-medium text-teal-700 dark:text-teal-400">{post.engagementRate}% ER</span>
                   </div>
                 </div>
               ))}
@@ -256,19 +256,19 @@ export default function Analytics() {
         </div>
 
         {/* Best Time to Post Heatmap */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-1">Best Time to Post</h3>
-          <p className="text-xs text-slate-500 mb-4">Based on average engagement by day and hour (last 90 days)</p>
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">Best Time to Post</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Based on average engagement by day and hour (last 90 days)</p>
 
           {heatmap.length === 0 || maxHeatVal === 0 ? (
-            <p className="text-sm text-slate-500 py-4 text-center">Not enough data to show best times.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 py-4 text-center">Not enough data to show best times.</p>
           ) : (
             <div className="overflow-x-auto">
               <div className="min-w-[600px]">
                 {/* Hour labels */}
                 <div className="flex ml-10 mb-1">
                   {Array.from({ length: 24 }, (_, h) => (
-                    <div key={h} className="flex-1 text-center text-[9px] text-slate-400">
+                    <div key={h} className="flex-1 text-center text-[9px] text-slate-400 dark:text-slate-500">
                       {h % 3 === 0 ? `${h}` : ''}
                     </div>
                   ))}
@@ -276,21 +276,21 @@ export default function Analytics() {
                 {/* Grid rows */}
                 {DAY_NAMES.map((dayName, d) => (
                   <div key={d} className="flex items-center gap-1 mb-[2px]">
-                    <span className="text-xs text-slate-500 w-9 text-right">{dayName}</span>
+                    <span className="text-xs text-slate-500 dark:text-slate-400 w-9 text-right">{dayName}</span>
                     <div className="flex flex-1 gap-[1px]">
                       {Array.from({ length: 24 }, (_, h) => {
                         const cell = heatmap.find((c) => c.dayOfWeek === d && c.hour === h);
                         const intensity = cell ? cell.avgEngagement / maxHeatVal : 0;
                         const bg =
                           intensity === 0
-                            ? 'bg-slate-100'
+                            ? 'bg-slate-100 dark:bg-slate-700'
                             : intensity < 0.25
-                              ? 'bg-teal-100'
+                              ? 'bg-teal-100 dark:bg-teal-900'
                               : intensity < 0.5
-                                ? 'bg-teal-300'
+                                ? 'bg-teal-300 dark:bg-teal-700'
                                 : intensity < 0.75
-                                  ? 'bg-teal-500'
-                                  : 'bg-teal-700';
+                                  ? 'bg-teal-500 dark:bg-teal-500'
+                                  : 'bg-teal-700 dark:bg-teal-300';
                         return (
                           <div
                             key={h}
@@ -304,13 +304,13 @@ export default function Analytics() {
                 ))}
                 {/* Legend */}
                 <div className="flex items-center justify-end gap-1 mt-3">
-                  <span className="text-[10px] text-slate-400">Less</span>
-                  <div className="w-4 h-3 rounded-sm bg-slate-100" />
-                  <div className="w-4 h-3 rounded-sm bg-teal-100" />
-                  <div className="w-4 h-3 rounded-sm bg-teal-300" />
-                  <div className="w-4 h-3 rounded-sm bg-teal-500" />
-                  <div className="w-4 h-3 rounded-sm bg-teal-700" />
-                  <span className="text-[10px] text-slate-400">More</span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">Less</span>
+                  <div className="w-4 h-3 rounded-sm bg-slate-100 dark:bg-slate-700" />
+                  <div className="w-4 h-3 rounded-sm bg-teal-100 dark:bg-teal-900" />
+                  <div className="w-4 h-3 rounded-sm bg-teal-300 dark:bg-teal-700" />
+                  <div className="w-4 h-3 rounded-sm bg-teal-500 dark:bg-teal-500" />
+                  <div className="w-4 h-3 rounded-sm bg-teal-700 dark:bg-teal-300" />
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">More</span>
                 </div>
               </div>
             </div>
@@ -318,13 +318,13 @@ export default function Analytics() {
 
           {/* Best Slots */}
           {bestSlots.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-100">
-              <h4 className="text-sm font-medium text-slate-700 mb-2 inline-flex items-center gap-1">
+            <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-700">
+              <h4 className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2 inline-flex items-center gap-1">
                 <Clock size={14} /> Recommended Times
               </h4>
               <div className="flex flex-wrap gap-2">
                 {bestSlots.map((slot, i) => (
-                  <span key={i} className="text-xs bg-teal-50 text-teal-800 px-2 py-1 rounded-full border border-teal-200">
+                  <span key={i} className="text-xs bg-teal-50 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 px-2 py-1 rounded-full border border-teal-200 dark:border-teal-700">
                     {DAY_NAMES[slot.dayOfWeek]} {slot.hour}:00 ({slot.avgEngagement.toFixed(1)} avg)
                   </span>
                 ))}

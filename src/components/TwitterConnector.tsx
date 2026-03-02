@@ -56,7 +56,7 @@ function AccountCard({
   const showAvatar = avatarUrl && !imgError;
 
   return (
-    <div className={`account-card-connected rounded-xl border border-slate-200 bg-white p-4 ${isNew ? 'fade-up success-glow' : ''}`}>
+    <div className={`account-card-connected rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 ${isNew ? 'fade-up success-glow' : ''}`}>
       <div className="flex items-start gap-3">
         {showAvatar ? (
           <img
@@ -72,16 +72,16 @@ function AccountCard({
         )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-slate-900 truncate">@{username}</span>
-            <span className="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full shrink-0">Connected</span>
+            <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">@{username}</span>
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full shrink-0">Connected</span>
           </div>
           {displayName !== username && (
-            <p className="text-sm text-slate-600 truncate">{displayName}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 truncate">{displayName}</p>
           )}
           {account.twitterBio && (
-            <p className="text-xs text-slate-500 mt-1 line-clamp-2">{account.twitterBio}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{account.twitterBio}</p>
           )}
-          <p className="text-xs text-slate-400 mt-1.5">
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
             {formatCount(account.twitterFollowersCount)} followers
             {' · '}
             {formatCount(account.twitterFriendsCount)} following
@@ -92,7 +92,7 @@ function AccountCard({
         <button
           onClick={onDisconnect}
           disabled={isDisconnecting}
-          className="text-xs text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50"
+          className="text-xs text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors disabled:opacity-50"
         >
           {isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
         </button>
@@ -301,17 +301,17 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
     <div className="dashboard-card fade-up mb-6">
       <div className="p-6">
         {successMessage && (
-          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg mb-4 fade-up">
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-lg mb-4 fade-up">
             <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-            <p className="text-sm text-emerald-800">{successMessage}</p>
+            <p className="text-sm text-emerald-800 dark:text-emerald-300">{successMessage}</p>
           </div>
         )}
 
         {errorMessage && (
-          <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+          <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg mb-4">
             <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm text-red-800">{errorMessage}</p>
+              <p className="text-sm text-red-800 dark:text-red-300">{errorMessage}</p>
               <button
                 onClick={() => { setErrorMessage(''); handleConnect(); }}
                 className="text-xs text-red-600 hover:text-red-800 underline mt-1"
@@ -324,22 +324,22 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
 
         {/* OOB Wizard */}
         {oobState && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 mb-4 space-y-5 fade-up">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 p-5 mb-4 space-y-5 fade-up">
             {/* Step 1 */}
             <div className="flex items-start gap-3">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${oobState.opened ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}`}>
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${oobState.opened ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'}`}>
                 {oobState.opened ? <CheckCircle2 size={16} /> : '1'}
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-slate-900">Approve on X</p>
-                <p className="text-xs text-slate-500 mt-0.5">Click below to open X in a new tab. Authorize the app to get your code.</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Approve on X</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Click below to open X in a new tab. Authorize the app to get your code.</p>
                 <button
                   type="button"
                   onClick={() => {
                     window.open(oobState.authUrl, '_blank', 'noopener,noreferrer');
                     setOobState((prev) => prev ? { ...prev, opened: true } : prev);
                   }}
-                  className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-sm rounded-lg hover:bg-slate-800 transition-colors"
+                  className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors"
                 >
                   <ExternalLink size={14} />
                   <span>Open X to Approve</span>
@@ -349,18 +349,18 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
 
             {/* Step 2 */}
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-slate-200 text-slate-600 shrink-0">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
                 2
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-slate-900">Paste Your Code</p>
-                <p className="text-xs text-slate-500 mt-0.5">After approving, X shows a short code. Paste it below.</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Paste Your Code</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">After approving, X shows a short code. Paste it below.</p>
                 <input
                   type="text"
                   value={oobState.verifier}
                   onChange={(e) => setOobState((prev) => prev ? { ...prev, verifier: e.target.value } : prev)}
                   placeholder="Paste code here"
-                  className="code-input mt-2 w-full max-w-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  className="code-input mt-2 w-full max-w-xs p-3 border border-slate-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
                 <div className="mt-3 flex items-center gap-2">
                   <button
@@ -373,7 +373,7 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
                   </button>
                   <button
                     onClick={handleCancelOob}
-                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                    className="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100"
                   >
                     Cancel
                   </button>
@@ -386,17 +386,17 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
         {/* Empty state */}
         {connectedCount === 0 && !oobState && (
           <div className="text-center py-8">
-            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-              <svg viewBox="0 0 24 24" className="w-7 h-7 text-slate-400" fill="currentColor">
+            <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mx-auto mb-3">
+              <svg viewBox="0 0 24 24" className="w-7 h-7 text-slate-400 dark:text-slate-500" fill="currentColor">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-slate-900 mb-1">No accounts connected</h3>
-            <p className="text-sm text-slate-500 mb-4">Connect your X account to start scheduling and posting.</p>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100 mb-1">No accounts connected</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Connect your X account to start scheduling and posting.</p>
             <button
               onClick={handleConnect}
               disabled={isConnecting}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors disabled:opacity-50"
             >
               {isConnecting ? <Loader2 className="animate-spin" size={16} /> : (
                 <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
@@ -426,7 +426,7 @@ export default function TwitterConnector({ onConnectionChange }: TwitterConnecto
               <button
                 onClick={handleConnect}
                 disabled={isConnecting}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-sm text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-200 transition-colors disabled:opacity-50"
               >
                 {isConnecting ? <Loader2 className="animate-spin" size={14} /> : <Plus size={14} />}
                 <span>{isConnecting ? 'Connecting...' : 'Add Another Account'}</span>

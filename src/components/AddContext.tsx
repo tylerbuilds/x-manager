@@ -240,14 +240,14 @@ Do not include any other text or explanation in your response, only the JSON arr
   return (
     <div className="dashboard-card fade-up mt-6">
       <div className="p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Add Context</h3>
+        <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-4">Add Context</h3>
         
         {error && <p className="text-red-500 mb-4">{error}</p>}
         {success && <p className="text-green-500 mb-4">{success}</p>}
 
         {/* Context Type Selection */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
             Context Type
           </label>
           <div className="flex flex-wrap gap-2">
@@ -257,8 +257,8 @@ Do not include any other text or explanation in your response, only the JSON arr
                 onClick={() => handleContextTypeChange(type)}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors ${
                   contextType === type
-                    ? 'bg-blue-50 border-blue-500 text-blue-700'
-                    : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-500 text-blue-700 dark:text-blue-400'
+                    : 'bg-gray-50 dark:bg-slate-900 border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
                 }`}
               >
                 {getContextIcon(type)}
@@ -270,7 +270,7 @@ Do not include any other text or explanation in your response, only the JSON arr
 
         {/* File Upload Section */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">
             Upload File (Optional)
           </label>
           <div className="flex items-center">
@@ -279,11 +279,11 @@ Do not include any other text or explanation in your response, only the JSON arr
               type="file"
               accept={getFileAcceptTypes()}
               onChange={handleFileChange}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="block w-full text-sm text-gray-500 dark:text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-400 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50"
             />
           </div>
           {file && (
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600 dark:text-slate-300 mt-2">
               Selected: {file.name}
             </p>
           )}
@@ -315,39 +315,39 @@ Do not include any other text or explanation in your response, only the JSON arr
         {/* Generated Tweets */}
         {generatedTweets.length > 0 && (
           <div className="mt-6" ref={scrollContainerRef}>
-            <h4 className="text-md font-medium text-gray-900 mb-2">Generated Tweets</h4>
+            <h4 className="text-md font-medium text-gray-900 dark:text-slate-100 mb-2">Generated Tweets</h4>
             <div className="space-y-3">
               {generatedTweets.map((tweet, index) => (
-                <div key={`tweet-${index}`} className="p-3 bg-gray-50 rounded-lg border flex flex-col sm:flex-row gap-2 justify-between">
+                <div key={`tweet-${index}`} className="p-3 bg-gray-50 dark:bg-slate-900 rounded-lg border dark:border-slate-700 flex flex-col sm:flex-row gap-2 justify-between">
                   {editingIndex === index ? (
                     <div className="flex-1">
                       <textarea
                         value={editingText}
                         onChange={(e) => setEditingText(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-800 dark:text-slate-100"
                         rows={3}
                       />
                       <div className="flex gap-2 mt-2">
-                        <button onClick={handleSaveEdit} className="flex items-center space-x-1 px-2 py-1 bg-green-500 text-white rounded hover:bg-green-600 text-sm">
+                        <button onClick={handleSaveEdit} className="flex items-center space-x-1 px-2 py-1 bg-green-500 dark:bg-green-600 text-white rounded hover:bg-green-600 dark:hover:bg-green-700 text-sm">
                           <Save size={14} /> <span>Save</span>
                         </button>
-                        <button onClick={handleCancelEdit} className="flex items-center space-x-1 px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">
+                        <button onClick={handleCancelEdit} className="flex items-center space-x-1 px-2 py-1 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 text-sm">
                           <X size={14} /> <span>Cancel</span>
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-gray-800 flex-1">{tweet}</p>
+                    <p className="text-gray-800 dark:text-slate-200 flex-1">{tweet}</p>
                   )}
                   <div className="flex gap-2 items-start">
                     <button 
                       onClick={() => handleEditTweet(index)} 
-                      className="p-2 text-gray-400 hover:text-blue-600"
+                      className="p-2 text-gray-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400"
                       data-edit-index={index}
                     >
                       <Edit size={16} />
                     </button>
-                    <button onClick={() => handleRemoveTweet(index)} className="p-2 text-gray-400 hover:text-red-600">
+                    <button onClick={() => handleRemoveTweet(index)} className="p-2 text-gray-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -356,11 +356,11 @@ Do not include any other text or explanation in your response, only the JSON arr
             </div>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-gray-700">Account</label>
+                <label className="text-sm text-gray-700 dark:text-slate-200">Account</label>
                 <select
                   value={accountSlot}
                   onChange={(e) => setAccountSlot(Number(e.target.value))}
-                  className="p-2 border border-gray-300 rounded-lg text-sm"
+                  className="p-2 border border-gray-300 dark:border-slate-600 rounded-lg text-sm dark:bg-slate-700 dark:text-slate-100"
                 >
                   <option value={1}>Account 1</option>
                   <option value={2}>Account 2</option>

@@ -142,16 +142,16 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-2">
           <FileUp className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-medium text-gray-900">CSV Tweet Import</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">CSV Tweet Import</h3>
         </div>
 
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-slate-300">
           Upload a CSV with columns like <code>text</code>, <code>scheduled_time</code>, <code>community_id</code>, <code>reply_to_tweet_id</code>, and <code>account_slot</code>.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">CSV File</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">CSV File</label>
             <input
               type="file"
               accept=".csv,text/csv"
@@ -164,37 +164,37 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
                 setStatusMessage('');
                 setStatusError('');
               }}
-              className="w-full p-2 border border-gray-300 rounded-lg"
+              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Auto Interval (min)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Auto Interval (min)</label>
             <input
               type="number"
               min={1}
               max={1440}
               value={intervalMinutes}
               onChange={(e) => setIntervalMinutes(Math.min(Math.max(Number(e.target.value) || 60, 1), 1440))}
-              className="w-full p-2 border border-gray-300 rounded-lg"
+              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Auto Start Date &amp; Time</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Auto Start Date &amp; Time</label>
             <input
               type="datetime-local"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg"
+              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Account Slot</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Account Slot</label>
             <select
               value={accountSlot}
               onChange={(e) => setAccountSlot(Number(e.target.value))}
-              className="w-full p-2 border border-gray-300 rounded-lg"
+              className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-100"
             >
               <option value={1}>Account 1</option>
               <option value={2}>Account 2</option>
@@ -202,16 +202,16 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
           </div>
         </div>
 
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-slate-400">
           CSV rows with <code>scheduled_time</code> always use that exact date/time. Auto interval/start only applies to rows without a schedule.
         </p>
 
-        <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+        <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-200">
           <input
             type="checkbox"
             checked={reschedulePast}
             onChange={(e) => setReschedulePast(e.target.checked)}
-            className="rounded border-gray-300"
+            className="rounded border-gray-300 dark:border-slate-600"
           />
           Auto-reschedule rows that are in the past
         </label>
@@ -229,7 +229,7 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
           <button
             onClick={handleImport}
             disabled={!canImport || isPreviewing}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-green-600 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 border border-green-600 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 disabled:opacity-50"
           >
             {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
             <span>{isImporting ? 'Importing...' : 'Import Into Scheduler'}</span>
@@ -237,28 +237,28 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
         </div>
 
         {(totalRows > 0 || validRows > 0) && (
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-slate-300">
             Rows: {validRows} valid / {totalRows} total
           </div>
         )}
 
         {statusMessage && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 p-3 text-sm text-green-800 dark:text-green-300">
             {statusMessage}
           </div>
         )}
 
         {statusError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 inline-flex items-start gap-2">
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3 text-sm text-red-700 dark:text-red-300 inline-flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-0.5" />
             <span>{statusError}</span>
           </div>
         )}
 
         {errors.length > 0 && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <h4 className="text-sm font-semibold text-red-800 mb-2">Import Errors</h4>
-            <ul className="text-sm text-red-700 space-y-1">
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 p-3">
+            <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2">Import Errors</h4>
+            <ul className="text-sm text-red-700 dark:text-red-400 space-y-1">
               {errors.slice(0, 20).map((issue, index) => (
                 <li key={`${issue.lineNumber}-${index}`}>
                   Line {issue.lineNumber}: {issue.message}
@@ -269,9 +269,9 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
         )}
 
         {warnings.length > 0 && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <h4 className="text-sm font-semibold text-amber-900 mb-2">Warnings</h4>
-            <ul className="text-sm text-amber-800 space-y-1">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 p-3">
+            <h4 className="text-sm font-semibold text-amber-900 dark:text-amber-300 mb-2">Warnings</h4>
+            <ul className="text-sm text-amber-800 dark:text-amber-400 space-y-1">
               {warnings.slice(0, 20).map((issue, index) => (
                 <li key={`${issue.lineNumber}-${index}`}>
                   Line {issue.lineNumber}: {issue.message}
@@ -282,11 +282,11 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
         )}
 
         {preview.length > 0 && (
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800">Preview (first {preview.length} row(s))</div>
+          <div className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-slate-900 px-3 py-2 text-sm font-medium text-gray-800 dark:text-slate-200">Preview (first {preview.length} row(s))</div>
             <div className="max-h-80 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-white border-b border-gray-200 sticky top-0">
+                <thead className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0">
                   <tr>
                     <th className="text-left p-2">Line</th>
                     <th className="text-left p-2">Account</th>
@@ -296,14 +296,14 @@ export default function CsvImporter({ onImported }: CsvImporterProps) {
                 </thead>
                 <tbody>
                   {preview.map((row) => (
-                    <tr key={`${row.lineNumber}-${row.scheduledTime}`} className="border-b border-gray-100 align-top">
-                      <td className="p-2 text-gray-500">{row.lineNumber}</td>
-                      <td className="p-2 text-gray-700">#{row.accountSlot}</td>
-                      <td className="p-2 text-gray-700 whitespace-nowrap">{new Date(row.scheduledTime).toLocaleString()}</td>
-                      <td className="p-2 text-gray-900">
+                    <tr key={`${row.lineNumber}-${row.scheduledTime}`} className="border-b border-gray-100 dark:border-slate-700 align-top">
+                      <td className="p-2 text-gray-500 dark:text-slate-400">{row.lineNumber}</td>
+                      <td className="p-2 text-gray-700 dark:text-slate-200">#{row.accountSlot}</td>
+                      <td className="p-2 text-gray-700 dark:text-slate-200 whitespace-nowrap">{new Date(row.scheduledTime).toLocaleString()}</td>
+                      <td className="p-2 text-gray-900 dark:text-slate-100">
                         <div>{row.text}</div>
                         {(row.communityId || row.replyToTweetId) && (
-                          <div className="mt-1 text-xs text-gray-500">
+                          <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                             {row.communityId && <span>community_id={row.communityId} </span>}
                             {row.replyToTweetId && <span>reply_to_tweet_id={row.replyToTweetId}</span>}
                           </div>

@@ -308,9 +308,10 @@ async function generateWithLlm(
 export async function POST(req: Request) {
   pruneRateLimitMap();
 
-  // Use IP as a best-effort rate-limit key (not available in all runtimes, falls back to 'global').
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? 'global';
-  if (!checkRateLimit(ip)) {
+  // Use a fixed rate-limit key since this is a single-user self-hosted app.
+  // Don't trust x-forwarded-for as it's trivially spoofable.
+  const rateLimitKey = 'global';
+  if (!checkRateLimit(rateLimitKey)) {
     return NextResponse.json(
       { error: 'Rate limit exceeded. Maximum 10 requests per minute.' },
       { status: 429 },

@@ -143,45 +143,45 @@ export default function CreateThreadFromArticle({ onScheduled }: CreateThreadFro
       <div className="p-4 space-y-4">
         <div className="flex items-center gap-2">
           <Sparkles size={18} className="text-teal-600" />
-          <h3 className="font-semibold text-slate-800">Create Thread From Article</h3>
+          <h3 className="font-semibold text-slate-800 dark:text-slate-200">Create Thread From Article</h3>
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">Article URL</label>
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Article URL</label>
           <input
             type="url"
             value={articleUrl}
             onChange={(e) => setArticleUrl(e.target.value)}
             placeholder="https://swarmsignal.net/..."
-            className="w-full p-2 border border-slate-300 rounded-md text-sm"
+            className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm dark:text-slate-100"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="text-sm font-medium text-slate-700">Account Slot</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Account Slot</label>
             <select
               value={accountSlot}
               onChange={(e) => setAccountSlot(Number(e.target.value))}
-              className="w-full p-2 border border-slate-300 rounded-md text-sm"
+              className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm dark:text-slate-100"
             >
               <option value={1}>Slot 1</option>
               <option value={2}>Slot 2</option>
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700">Max Tweets</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-200">Max Tweets</label>
             <input
               type="number"
               min={2}
               max={12}
               value={maxTweets}
               onChange={(e) => setMaxTweets(Math.max(2, Math.min(12, Number(e.target.value) || 6)))}
-              className="w-full p-2 border border-slate-300 rounded-md text-sm"
+              className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm dark:text-slate-100"
             />
           </div>
           <div className="flex items-end">
-            <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <label className="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
               <input
                 type="checkbox"
                 checked={includeImages}
@@ -201,18 +201,18 @@ export default function CreateThreadFromArticle({ onScheduled }: CreateThreadFro
           <span>{loadingDraft ? 'Creating Draft...' : 'Create Draft'}</span>
         </button>
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {success && <p className="text-sm text-green-700">{success}</p>}
+        {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+        {success && <p className="text-sm text-green-700 dark:text-green-400">{success}</p>}
 
         {draft && (
-          <div className="space-y-3 border-t border-slate-200 pt-4">
-            <div className="text-sm text-slate-700 space-y-1">
+          <div className="space-y-3 border-t border-slate-200 dark:border-slate-700 pt-4">
+            <div className="text-sm text-slate-700 dark:text-slate-200 space-y-1">
               <p className="font-medium">{draft.article.title}</p>
-              <p className="inline-flex items-center gap-1 text-slate-600">
+              <p className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                 <Link2 size={14} />
                 <span className="break-all">{draft.article.canonical_url}</span>
               </p>
-              <p className="inline-flex items-center gap-1 text-slate-600">
+              <p className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-300">
                 <ImageIcon size={14} />
                 <span>{draft.article.downloaded_media_urls.length} image(s) saved from article</span>
               </p>
@@ -220,16 +220,16 @@ export default function CreateThreadFromArticle({ onScheduled }: CreateThreadFro
 
             <div className="space-y-2">
               {draft.draft.tweets.map((tweet, index) => (
-                <div key={index} className="border border-slate-200 rounded-md p-2">
-                  <label className="text-xs text-slate-500">Tweet {index + 1}</label>
+                <div key={index} className="border border-slate-200 dark:border-slate-700 rounded-md p-2">
+                  <label className="text-xs text-slate-500 dark:text-slate-400">Tweet {index + 1}</label>
                   <textarea
                     value={tweet.text}
                     onChange={(e) => updateTweetText(index, e.target.value)}
-                    className="w-full mt-1 p-2 border border-slate-300 rounded-md text-sm"
+                    className="w-full mt-1 p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm dark:text-slate-100"
                     rows={3}
                   />
                   {tweet.media_urls && tweet.media_urls.length > 0 && (
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                       Media: {tweet.media_urls.join(', ')}
                     </p>
                   )}
@@ -238,7 +238,7 @@ export default function CreateThreadFromArticle({ onScheduled }: CreateThreadFro
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700 inline-flex items-center gap-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200 inline-flex items-center gap-2">
                 <Calendar size={14} />
                 Schedule Time
               </label>
@@ -246,7 +246,7 @@ export default function CreateThreadFromArticle({ onScheduled }: CreateThreadFro
                 type="datetime-local"
                 value={scheduledTime}
                 onChange={(e) => setScheduledTime(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                className="w-full p-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 rounded-md text-sm dark:text-slate-100"
               />
             </div>
 

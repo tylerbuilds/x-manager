@@ -7,18 +7,17 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   error: 3,
 };
 
-function getConfiguredLevel(): LogLevel {
+// Cache config at module load — env vars don't change during process lifecycle
+const _configuredLevel: LogLevel = (() => {
   const raw = (process.env.LOG_LEVEL || 'info').toLowerCase();
   if (raw in LEVEL_ORDER) return raw as LogLevel;
   return 'info';
-}
+})();
 
-function isTextFormat(): boolean {
-  return (process.env.LOG_FORMAT || '').toLowerCase() === 'text';
-}
+const _isTextFormat: boolean = (process.env.LOG_FORMAT || '').toLowerCase() === 'text';
 
 function shouldLog(level: LogLevel): boolean {
-  return LEVEL_ORDER[level] >= LEVEL_ORDER[getConfiguredLevel()];
+  return LEVEL_ORDER[level] >= LEVEL_ORDER[_configuredLevel];
 }
 
 function extractExtra(args: unknown[]): Record<string, unknown> {
@@ -69,7 +68,7 @@ function emitText(level: LogLevel, component: string, msg: string, extra: Record
 }
 
 function emit(level: LogLevel, component: string, msg: string, extra: Record<string, unknown>): void {
-  if (isTextFormat()) {
+  if (_isTextFormat) {
     emitText(level, component, msg, extra);
   } else {
     emitJson(level, component, msg, extra);

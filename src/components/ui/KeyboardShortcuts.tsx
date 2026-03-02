@@ -91,13 +91,6 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   // Global keydown listener — lives here so it runs even if hook components unmount
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // '?' opens help (shift+/) — checked before input guard so it always works
-      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        setHelpOpen((v) => !v);
-        e.preventDefault();
-        return;
-      }
-
       // Escape closes help first; other Escape handlers can still run
       if (e.key === 'Escape') {
         if (helpOpen) {
@@ -107,7 +100,15 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // Skip all other shortcuts when user is typing in an input/textarea
       if (isInputFocused()) return;
+
+      // '?' opens help (shift+/) — only when NOT focused on an input
+      if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        setHelpOpen((v) => !v);
+        e.preventDefault();
+        return;
+      }
 
       for (const entry of shortcutsRef.current) {
         if (matchesShortcut(e, entry)) {

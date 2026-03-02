@@ -104,15 +104,15 @@ export default function TopicDiscovery() {
       <div className="p-6 space-y-5">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Topic Discovery</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">Topic Discovery</h3>
+            <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">
               Find reply-worthy posts and keep an eye on usage credits.
             </p>
           </div>
           <button
             onClick={refreshUsage}
             disabled={isRefreshingUsage}
-            className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50"
           >
             {isRefreshingUsage ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
             <span>{isRefreshingUsage ? 'Refreshing...' : 'Fetch Usage'}</span>
@@ -120,34 +120,34 @@ export default function TopicDiscovery() {
         </div>
 
         {usage && (
-          <div className="rounded-lg border border-blue-100 bg-blue-50 p-3">
-            <p className="text-sm text-blue-900">
+          <div className="rounded-lg border border-blue-100 dark:border-blue-800 bg-blue-50 dark:bg-blue-950 p-3">
+            <p className="text-sm text-blue-900 dark:text-blue-200">
               Usage snapshot from <span className="font-medium">{new Date(usage.fetchedAt).toLocaleString()}</span>
             </p>
-            <pre className="text-xs text-blue-900 mt-2 overflow-x-auto">{JSON.stringify(usage.usage, null, 2)}</pre>
+            <pre className="text-xs text-blue-900 dark:text-blue-200 mt-2 overflow-x-auto">{JSON.stringify(usage.usage, null, 2)}</pre>
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="md:col-span-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Keywords</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Keywords</label>
             <input
               type="text"
               value={keywords}
               onChange={(e) => setKeywords(e.target.value)}
               placeholder="ai agents, dev tools, startup ops"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Max Results</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-1">Max Results</label>
             <input
               type="number"
               min={10}
               max={25}
               value={limit}
               onChange={(e) => setLimit(Math.min(Math.max(Number(e.target.value) || 10, 10), 25))}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -162,48 +162,48 @@ export default function TopicDiscovery() {
         </button>
 
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-3 text-sm text-red-700 dark:text-red-300">
             {error}
           </div>
         )}
 
         {query && (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+          <div className="rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900 p-3 text-sm text-gray-700 dark:text-slate-200">
             Search query: <span className="font-mono">{query}</span>{' '}
-            {source && <span className="text-gray-500">({source})</span>}
+            {source && <span className="text-gray-500 dark:text-slate-400">({source})</span>}
           </div>
         )}
 
         <div className="space-y-3">
           {topics.length === 0 && !isSearching ? (
-            <p className="text-sm text-gray-500">No topics yet. Run a keyword search to populate candidates.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">No topics yet. Run a keyword search to populate candidates.</p>
           ) : (
             topics.map((topic) => (
-              <div key={topic.id} className="rounded-lg border border-gray-200 p-4 space-y-3">
+              <div key={topic.id} className="rounded-lg border border-gray-200 dark:border-slate-700 p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium text-gray-900">
+                  <div className="text-sm text-gray-600 dark:text-slate-300">
+                    <span className="font-medium text-gray-900 dark:text-slate-100">
                       {topic.author.name || topic.author.username || 'Unknown author'}
                     </span>
                     {topic.author.username && <span> · @{topic.author.username}</span>}
                     {topic.author.verified && <span> · Verified</span>}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-slate-400">
                     Score {topic.relevanceScore} · {topic.createdAt ? new Date(topic.createdAt).toLocaleString() : 'Unknown time'}
                   </div>
                 </div>
 
-                <p className="text-sm text-gray-900 whitespace-pre-wrap">{topic.text}</p>
+                <p className="text-sm text-gray-900 dark:text-slate-100 whitespace-pre-wrap">{topic.text}</p>
 
-                <div className="text-xs text-gray-600 flex gap-4 flex-wrap">
+                <div className="text-xs text-gray-600 dark:text-slate-300 flex gap-4 flex-wrap">
                   <span>Likes: {topic.metrics.likes}</span>
                   <span>Replies: {topic.metrics.replies}</span>
                   <span>Reposts: {topic.metrics.reposts}</span>
                   <span>Quotes: {topic.metrics.quotes}</span>
                 </div>
 
-                <div className="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm text-gray-800">
-                  <p className="font-medium text-gray-900 mb-1">Reply starter</p>
+                <div className="rounded-md bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 p-3 text-sm text-gray-800 dark:text-slate-200">
+                  <p className="font-medium text-gray-900 dark:text-slate-100 mb-1">Reply starter</p>
                   <p>{topic.suggestedReplyStarter}</p>
                 </div>
 
@@ -212,14 +212,14 @@ export default function TopicDiscovery() {
                     href={topic.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700"
                   >
                     <Link2 className="h-4 w-4" />
                     Open Post
                   </a>
                   <button
                     onClick={() => copyText(topic.suggestedReplyStarter)}
-                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700"
                   >
                     <Copy className="h-4 w-4" />
                     Copy Reply Starter
